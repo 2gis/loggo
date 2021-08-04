@@ -1,0 +1,14 @@
+---
+
+- name: test_service_0
+  loggo.sla/enable: disable
+  router.deis.io/domains: hello.world,hello.world1
+  loggo.sla/paths: '[{"label1": [".*"]}]'
+- name: TestService1
+  loggo.sla/enable: enable
+  router.deis.io/domains: f.2gis.test.ru,f.2gis.test
+  loggo.sla/paths: '[{"all": [".*"]}]'
+- name: test_service_2
+  loggo.sla/enable: enable
+  router.deis.io/domains: test_service_2
+  loggo.sla/paths: '[{"all": [".*"]}]'

@@ -1,0 +1,13 @@
+language: go
+
+services:
+  - docker
+
+go:
+  - "1.16.3"
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get -y install libsystemd-dev
+
+script: make build build-test test functional-test-redis

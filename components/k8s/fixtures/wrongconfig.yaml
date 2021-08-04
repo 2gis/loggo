@@ -1,0 +1,5 @@
+---
+
+- name: test_service_0
+  loggo.sla/enable: enable
+  loggo.sla/paths: '[{"label1": [".*"]}]'

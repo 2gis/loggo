@@ -1,0 +1,9 @@
+---
+- name: A
+  loggo.sla/enable: enable
+  router.deis.io/domains: testdomain
+  loggo.sla/paths: '[{"all": [".*"]}]'
+- name: B
+  loggo.sla/enable: enable
+  loggo.sla/domains: api.2gis.com
+  loggo.sla/paths: '[{"all": [".*"]}]'
