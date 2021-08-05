@@ -1,0 +1,13 @@
+version: '2'
+services:
+  loggo:
+    build: .
+  redis:
+    image: redis:6.2.5
+    ports:
+      - "6379:6379"
+  rabbit:
+    image: rabbitmq:3.7-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
