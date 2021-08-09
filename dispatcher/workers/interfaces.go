@@ -60,7 +60,7 @@ type FollowerJournald interface {
 // FollowerFabric is a follower fabric interface for dispatcher
 type FollowerFabric interface {
 	NewFollower(
-		output chan<- *common.Entry, filePath string, extends common.EntryMap) (Follower, error)
+		output chan<- *common.Entry, filePath, format string, extends common.EntryMap) (Follower, error)
 	NewFollowerJournald(
 		output chan<- string, logger logging.Logger) (FollowerJournald, error)
 }

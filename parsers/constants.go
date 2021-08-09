@@ -1,6 +1,9 @@
 package parsers
 
-/* Nginx particular log keys */
+// LogKeyLog field that contains actual user log in log line.
+const LogKeyLog = "log"
+
+/* Nginx related particular log keys */
 const (
 	LogKeyUpstreamResponseTime            = "upstream_response_time"
 	LogKeyUpstreamResponseTimeReplacement = "upstream_response_time_float"
@@ -12,6 +15,17 @@ const (
 	LogKeyRequestTime                     = "request_time"
 	LogKeyStatus                          = "status"
 	LogKeyUpstreamPodName                 = "upstream_pod_name"
-	LogKeySLA                             = "sla"
-	LogKeyLogging                         = "logging"
+)
+
+/* Processing control related fields */
+const (
+	LogKeySLA     = "sla"
+	LogKeyLogging = "logging"
+)
+
+/* ContainerD related constants */
+const (
+	containerDLineGroupsCount = 4
+	LogKeyTime                = "time"
+	LogKeyStream              = "stream"
 )

@@ -173,6 +173,7 @@ func (d *Dispatcher) startFollowers(ctx context.Context, containers containers.C
 		follower, err := d.followerFabric.NewFollower(
 			d.output,
 			container.LogPath,
+			container.Type,
 			d.containerExtends(container),
 		)
 
@@ -219,5 +220,6 @@ func (d *Dispatcher) containerExtends(c *containers.Container) (extends common.E
 	extends[common.KubernetesPodName] = c.GetPodName()
 	extends[common.KubernetesNamespaceName] = c.GetPodNamespace()
 	extends[common.KubernetesContainerName] = c.GetName()
+
 	return
 }

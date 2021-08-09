@@ -43,3 +43,8 @@ const (
 	// LabelKubernetesContainerName store label name of container
 	LabelKubernetesContainerName = "io.kubernetes.container.name"
 )
+
+const (
+	CRITypeContainerD = "containerd"
+	CRITypeDocker     = "docker"
+)

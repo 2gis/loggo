@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/2gis/loggo/common"
 	"github.com/2gis/loggo/logging"
 )
@@ -30,21 +31,21 @@ func TestStageParsingEntryTest(t *testing.T) {
 		entryMap common.EntryMap
 	}{
 		{
-			entry:    common.Entry{Origin: []byte("value")},
+			entry:    common.Entry{Origin: []byte("value"), Format: common.CRITypeDocker},
 			entryMap: common.EntryMap{"line": "value"},
 		},
 		{
-			entry:    common.Entry{Origin: []byte("")},
+			entry:    common.Entry{Origin: []byte(""), Format: common.CRITypeDocker},
 			entryMap: common.EntryMap{"default": true},
 		},
 		{
-			entry:    common.Entry{Origin: []byte(nil)},
+			entry:    common.Entry{Origin: []byte(nil), Format: common.CRITypeDocker},
 			entryMap: common.EntryMap{"default": true},
 		},
 	}
 
 	input := make(chan *common.Entry, len(expectations))
-	stage := NewStageParsingEntry(input, []ParserFunction{parserFunctionTest}, parserFunctionDefaultTest, logging.NewLoggerDefault())
+	stage := NewStageParsingEntry(input, parserFunctionTest, nil, parserFunctionDefaultTest, logging.NewLoggerDefault())
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
@@ -55,7 +56,7 @@ func TestStageParsingEntryTest(t *testing.T) {
 
 	for _, message := range expectations {
 		input <- &message.entry
-		assert.Equal(t, <-stage.Out(), message.entryMap)
+		assert.Equal(t, message.entryMap, <-stage.Out())
 	}
 
 	close(input)
