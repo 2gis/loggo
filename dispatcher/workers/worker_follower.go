@@ -16,6 +16,7 @@ type workerFollower struct {
 	worker
 
 	filePath      string
+	format        string
 	namespace     string
 	podName       string
 	containerName string
@@ -42,7 +43,7 @@ type workerFollower struct {
 }
 
 // NewFollower is a workerFollower constructor
-func newFollower(output chan<- *common.Entry, filePath string,
+func newFollower(output chan<- *common.Entry, filePath, format string,
 	reader LineReader, collector MetricsCollector, storage Storage, rater Rater, extends common.EntryMap,
 	sleepNoRecordsIntervalSec, commitIntervalSec, limitUpdateInterval int, logger logging.Logger) *workerFollower {
 	podName := extends.PodName()
@@ -56,6 +57,7 @@ func newFollower(output chan<- *common.Entry, filePath string,
 		},
 
 		filePath:      filePath,
+		format:        format,
 		namespace:     namespace,
 		podName:       podName,
 		containerName: containerName,
@@ -190,7 +192,7 @@ func (worker *workerFollower) entryProceed() error {
 
 	if prefixFlag {
 		worker.logger.Warnf(
-			"JournaldReader for '%s' has encountered the long string "+
+			"Reader for '%s' has encountered the long string "+
 				"that doesn't fit into the buffer. Follower extends: '%s', string prefix: '%s'",
 			worker.filePath,
 			worker.extends,
@@ -198,7 +200,7 @@ func (worker *workerFollower) entryProceed() error {
 		)
 	}
 
-	worker.output <- &common.Entry{Origin: entry, Extends: worker.extends}
+	worker.output <- &common.Entry{Origin: entry, Format: worker.format, Extends: worker.extends}
 	worker.metricsCollector.IncrementLogMessageCount(
 		worker.namespace,
 		worker.podName,

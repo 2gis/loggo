@@ -28,7 +28,7 @@ func NewFollowersFabric(config configuration.Config,
 	}
 }
 
-func (f *FollowersFabric) NewFollower(output chan<- *common.Entry, filePath string,
+func (f *FollowersFabric) NewFollower(output chan<- *common.Entry, filePath, format string,
 	containerExtends common.EntryMap) (Follower, error) {
 	cursorString, _ := f.storage.Get(filePath)
 	cursor, _ := readers.NewCursorFromString(cursorString)
@@ -49,6 +49,7 @@ func (f *FollowersFabric) NewFollower(output chan<- *common.Entry, filePath stri
 	worker := newFollower(
 		output,
 		filePath,
+		format,
 		lineReader,
 		f.collector,
 		f.storage,
@@ -62,7 +63,7 @@ func (f *FollowersFabric) NewFollower(output chan<- *common.Entry, filePath stri
 	return worker, nil
 }
 
-// newFollowerJournald constructor
+// NewFollowerJournald constructor
 func (f *FollowersFabric) NewFollowerJournald(output chan<- string, logger logging.Logger) (FollowerJournald, error) {
 	journaldPath, err := readers.JournaldPath(
 		f.config.JournaldConfig.MachineIDPath,

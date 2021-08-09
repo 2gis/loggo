@@ -164,7 +164,8 @@ func main() {
 
 	stageParsing := stages.NewStageParsingEntry(
 		workersDispatcher.Out(),
-		[]stages.ParserFunction{parsers.ParseInnerJSON},
+		parsers.ParseDockerFormat,
+		parsers.ParseContainerDFormat,
 		parsers.ParseStringPlain,
 		logger,
 	)

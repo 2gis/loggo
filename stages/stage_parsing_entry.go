@@ -1,6 +1,7 @@
 package stages
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/2gis/loggo/common"
@@ -10,12 +11,15 @@ import (
 type ParserFunction func([]byte) (common.EntryMap, error)
 type ParserFunctionDefault func([]byte) common.EntryMap
 
+var ErrUnknownMessageFormat = errors.New("unknown message log format")
+
 // StageParsingEntry parses lines using given parser, extends resulting map with metadata and sends it downstream
 type StageParsingEntry struct {
 	stage
 
-	parsers      []ParserFunction
-	parseDefault ParserFunctionDefault
+	parseDockerFormat     ParserFunction
+	parseContainerDFormat ParserFunction
+	parseDefault          ParserFunctionDefault
 
 	input  <-chan *common.Entry
 	output chan common.EntryMap
@@ -33,13 +37,14 @@ func (s *StageParsingEntry) Close() {
 }
 
 // NewStageParsingEntry is a StageParsingEntry constructor
-func NewStageParsingEntry(input <-chan *common.Entry, parsers []ParserFunction,
+func NewStageParsingEntry(input <-chan *common.Entry, parseDocker, parseContainerD ParserFunction,
 	parserDefault ParserFunctionDefault, logger logging.Logger) *StageParsingEntry {
 	stage := &StageParsingEntry{
 		stage: stage{wg: &sync.WaitGroup{}, logger: logger},
 
-		parsers:      parsers,
-		parseDefault: parserDefault,
+		parseDockerFormat:     parseDocker,
+		parseContainerDFormat: parseContainerD,
+		parseDefault:          parserDefault,
 
 		input:  input,
 		output: make(chan common.EntryMap),
@@ -53,22 +58,18 @@ func (s *StageParsingEntry) proceed() {
 		var entryMap common.EntryMap
 		var err error
 
-		for _, parse := range s.parsers {
-			entryMap, err = parse(message.Origin)
-
-			if err != nil {
-				s.logger.Warnf(
-					"Error parsing log entry, entry '%s', error '%s'",
-					message,
-					err,
-				)
-				continue
-			}
-
-			break
+		switch message.Format {
+		case common.CRITypeDocker:
+			entryMap, err = s.parseDockerFormat(message.Origin)
+		case common.CRITypeContainerD:
+			entryMap, err = s.parseContainerDFormat(message.Origin)
+		default:
+			err = ErrUnknownMessageFormat
 		}
 
 		if err != nil {
+			s.logger.WithField("entry", message).WithError(err).
+				Warnf("Error parsing log entry, passing as raw string")
 			entryMap = s.parseDefault(message.Origin)
 		}
 

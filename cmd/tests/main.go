@@ -223,6 +223,7 @@ func testRedis(c config) {
 	for i := 0; i < sentRecordsCount; i++ {
 		message, err := client.ReceiveMessage()
 
+
 		if err != nil {
 			log.Fatalf("Receive failed: %s", err)
 		}

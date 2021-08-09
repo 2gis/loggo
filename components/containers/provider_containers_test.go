@@ -99,7 +99,7 @@ func TestFunctions(t *testing.T) {
 	assert.Equal(t, 1, len(directories))
 	assert.Equal(t, environment.containerDir, directories[0])
 
-	links, err := Symlinks(directories[0])
+	links, _, err := SymlinksAndFiles(directories[0])
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(links))
 	assert.Equal(t, filepath.Join(environment.containerDir, "my-service_0.log"), links[0])
@@ -116,8 +116,9 @@ func TestFunctions(t *testing.T) {
 	configPath, err := getConfigFilePath(actualPath)
 	assert.NoError(t, err)
 
-	config, err := deserializeContainerConfig(configPath)
+	config, err := deserializeContainerConfig(actualPath, configPath)
 	assert.NoError(t, err)
+	assert.Equal(t, actualPath, config.LogPath)
 	assert.Equal(t, "123abc", config.ID)
 	assert.Equal(t, "yabloko", config.GetPodNamespace())
 	assert.Equal(t, "123abc", config.GetPodName())
@@ -135,6 +136,7 @@ func TestContainersProvider(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(containers))
 
+	fmt.Println(containers)
 	container := containers["/tmp/loggo-tests/loggo-containers/123abc/123abc-json.log"]
 	assert.Equal(t, "service", container.GetName())
 	assert.Equal(t, "123abc", container.GetPodName())

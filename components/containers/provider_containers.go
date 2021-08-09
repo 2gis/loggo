@@ -26,10 +26,13 @@ import (
 const (
 	configFileName     = "config.v2.json"
 	loggoContainerName = "loggo"
+	logFilesSuffix     = ".log"
 )
 
 // Container represents container configuration
 type Container struct {
+	Type string `json:"-"`
+
 	ID      string        `json:"ID"`
 	LogPath string        `json:"LogPath"`
 	State   StateSection  `json:"State"`
@@ -115,7 +118,7 @@ func (provider *ProviderContainers) Containers() (Containers, error) {
 	}
 
 	for _, dir := range directories {
-		links, err := Symlinks(dir)
+		links, files, err := SymlinksAndFiles(dir)
 
 		if err != nil {
 			provider.logger.Warnf("containers provider is unable to read dir: %s", dir)
@@ -137,18 +140,29 @@ func (provider *ProviderContainers) Containers() (Containers, error) {
 				continue
 			}
 
-			container, err := deserializeContainerConfig(configPath)
+			container, err := deserializeContainerConfig(path, configPath)
 
 			if err != nil {
 				continue
 			}
 
-			// in current use cases regexes look like overkill
 			if strings.Contains(container.GetName(), loggoContainerName) {
 				continue
 			}
 
-			container.LogPath = path
+			containers[container.LogPath] = container
+		}
+
+		for _, path := range files {
+			container := deserializeContainerConfigContainerD(path)
+			if !strings.HasSuffix(container.LogPath, logFilesSuffix) {
+				continue
+			}
+
+			if strings.Contains(container.GetName(), loggoContainerName) {
+				continue
+			}
+
 			containers[container.LogPath] = container
 		}
 	}
@@ -157,11 +171,11 @@ func (provider *ProviderContainers) Containers() (Containers, error) {
 }
 
 func Tree(path string) ([]string, error) {
-	output := make([]string, 0, 1)
+	directories := make([]string, 0, 1)
 	files, err := ioutil.ReadDir(path)
 
 	if err != nil {
-		return output, err
+		return directories, err
 	}
 
 	for _, file := range files {
@@ -173,33 +187,40 @@ func Tree(path string) ([]string, error) {
 		subdirectories, err := Tree(filePath)
 
 		if err != nil {
-			return output, err
+			return directories, err
 		}
 
-		output = append(output, filePath)
-		output = append(output, subdirectories...)
+		directories = append(directories, filePath)
+		directories = append(directories, subdirectories...)
 	}
 
-	return output, nil
+	return directories, nil
 }
 
-func Symlinks(path string) ([]string, error) {
+func SymlinksAndFiles(path string) ([]string, []string, error) {
 	symlinks := make([]string, 0)
-	files, err := ioutil.ReadDir(path)
+	files := make([]string, 0)
+
+	content, err := ioutil.ReadDir(path)
 
 	if err != nil {
-		return symlinks, err
+		return symlinks, files, err
 	}
 
-	for _, file := range files {
+	for _, file := range content {
+		if file.IsDir() {
+			continue
+		}
+
 		if file.Mode()&os.ModeSymlink == 0 {
+			files = append(files, filepath.Join(path, file.Name()))
 			continue
 		}
 
 		symlinks = append(symlinks, filepath.Join(path, file.Name()))
 	}
 
-	return symlinks, nil
+	return symlinks, files, nil
 }
 
 func getConfigFilePath(logfile string) (string, error) {
@@ -252,14 +273,38 @@ func (provider *ProviderContainers) resolveSymlink(path string) (string, error) 
 	return absTarget, nil
 }
 
-func deserializeContainerConfig(configPath string) (*Container, error) {
+func deserializeContainerConfig(resolvedPath, configPath string) (*Container, error) {
 	config, err := ioutil.ReadFile(configPath)
 
 	if err != nil {
 		return nil, err
 	}
 
-	container := &Container{}
+	container := &Container{Type: common.CRITypeDocker}
 	err = json.Unmarshal(config, container)
+	container.LogPath = resolvedPath
+
 	return container, err
+}
+
+func deserializeContainerConfigContainerD(path string) *Container {
+	containerDir := filepath.Dir(path)
+
+	split := strings.Split(filepath.Base(filepath.Dir(containerDir)), "_")
+	namespace := split[0]
+	pod := split[1]
+	id := split[2]
+
+	return &Container{
+		Type:    common.CRITypeContainerD,
+		ID:      id,
+		LogPath: path,
+		Config: ConfigSection{
+			Labels: map[string]string{
+				common.LabelKubernetesPodName:       pod,
+				common.LabelKubernetesPodNamespace:  namespace,
+				common.LabelKubernetesContainerName: filepath.Base(containerDir),
+			},
+		},
+	}
 }

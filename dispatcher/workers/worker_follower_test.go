@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/2gis/loggo/components/rates"
 	"github.com/2gis/loggo/tests/mocks"
 
@@ -19,6 +20,7 @@ import (
 const (
 	FilePathTemp           = "/tmp/test_line_reader"
 	FilePathTempRegistry   = "/tmp/test_storage"
+	FormatTest             = "test_format"
 	readRate               = 1000
 	commitInterval         = 1
 	limiterUpdateInterval  = 1
@@ -46,6 +48,7 @@ func TestFollower_Positive(t *testing.T) {
 	follower := newFollower(
 		output,
 		FilePathTemp,
+		FormatTest,
 		reader,
 		mocks.NewCollectorMock(),
 		cursorStorage,
@@ -64,7 +67,7 @@ func TestFollower_Positive(t *testing.T) {
 	}()
 
 	for i := 0; i < len(lines); i++ {
-		assert.Equal(t, &common.Entry{Origin: lines[i], Extends: extends}, <-output)
+		assert.Equal(t, &common.Entry{Origin: lines[i], Format: FormatTest, Extends: extends}, <-output)
 	}
 
 	follower.Stop()
@@ -86,6 +89,7 @@ func TestFollowerBase_ShutdownOnFileMissing(t *testing.T) {
 	follower := newFollower(
 		output,
 		FilePathTemp,
+		FormatTest,
 		reader,
 		mocks.NewCollectorMock(),
 		cursorStorage,
@@ -124,6 +128,7 @@ func TestFollowerBase_CommitCursorOnStop(t *testing.T) {
 	follower := newFollower(
 		output,
 		FilePathTemp,
+		FormatTest,
 		reader,
 		mocks.NewCollectorMock(),
 		cursorStorage,
@@ -163,6 +168,7 @@ func TestFollowerBase_CommitCursorOnStop(t *testing.T) {
 	follower = newFollower(
 		output,
 		FilePathTemp,
+		FormatTest,
 		reader,
 		mocks.NewCollectorMock(),
 		cursorStorage,
