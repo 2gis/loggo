@@ -306,5 +306,7 @@ func deserializeContainerConfigContainerD(path string) *Container {
 				common.LabelKubernetesContainerName: filepath.Base(containerDir),
 			},
 		},
+		// todo: hotfix, until we'll be able to evaluate it
+		State: StateSection{Running: true},
 	}
 }
