@@ -8,6 +8,7 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
+	github.com/aws/aws-sdk-go v1.40.24
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/boltdb/bolt v1.3.1
 	github.com/cespare/xxhash v1.0.0 // indirect
@@ -33,7 +34,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/onsi/ginkgo v1.10.3 // indirect
 	github.com/onsi/gomega v1.7.1 // indirect
-	github.com/pkg/errors v0.8.1-0.20180311214515-816c9085562c
+	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v0.9.0-pre1.0.20180416233856-82f5ff156b29
 	github.com/prometheus/client_model v0.0.0-20171117100541-99fa1f4be8e5 // indirect
@@ -54,7 +55,7 @@ require (
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.0.0-20180624190308-00c78f6603af
 	k8s.io/apimachinery v0.0.0-20180126010752-19e3f5aa3adc
 	k8s.io/client-go v7.0.0+incompatible
