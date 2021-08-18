@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/2gis/loggo/storage"
 	"github.com/2gis/loggo/transport"
 	"github.com/2gis/loggo/transport/amqpclient"
+	"github.com/2gis/loggo/transport/firehoseclient"
 	"github.com/2gis/loggo/transport/redisclient"
 )
 
@@ -41,16 +43,24 @@ func main() {
 
 	switch config.Transport {
 	case transport.TypeAMQP:
-		transportClient, err = amqpclient.NewAMQPClient(config.AMQPURL, config.AMQPExchange, config.AMQPRoutingKey)
+		transportClient, err = amqpclient.NewAMQPClient(config.AMQPTransportConfig)
 
 		if err != nil {
-			logger.Fatalf("Unable to init amqp client. %s", err)
+			logger.Fatalf("Unable to init amqp client, %s", err)
 		}
 	case transport.TypeRedis:
-		transportClient = redisclient.NewRedisClient(config.RedisHostname, config.RedisKey)
+		transportClient = redisclient.NewRedisClient(config.RedisTransportConfig)
+	case transport.TypeFirehose:
+		transportClient, err = firehoseclient.NewFireHoseClient(config.FirehostTransportConfig)
 
+		if err != nil {
+			logger.Fatalf("Unable to init firehose client, %s", err)
+		}
 	default:
-		logger.Fatal("Unsupported transport type, only amqp and redis are supported.")
+		logger.Fatalf(
+			"Unsupported transport type, supported types: [%s].",
+			strings.Join(transport.TypesSupported, ", "),
+		)
 	}
 
 	cursorStorage, err := storage.NewStorage(config.PositionFilePath, 1)

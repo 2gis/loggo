@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/prometheus/pkg/textparse"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/2gis/loggo/configuration"
 	"github.com/2gis/loggo/transport/amqpclient"
 	"github.com/2gis/loggo/transport/redisclient"
 )
@@ -33,12 +34,10 @@ type nginxLog struct {
 }
 
 type config struct {
-	amqpURL        string
-	amqpExchange   string
-	amqpRoutingKey string
-	redisURL       string
-	redisKey       string
-	transport      string
+	amqpTransportConfig  configuration.AMQPTransportConfig
+	redisTransportConfig configuration.RedisTransportConfig
+
+	transport string
 
 	createRabbitQueues bool
 	slaTesting         bool
@@ -59,23 +58,23 @@ func main() {
 	kingpin.Flag("amqp-url", "Where to send log messages").
 		Default("amqp://localhost/").
 		Envar("AMQP_URL").
-		StringVar(&config.amqpURL)
+		StringVar(&config.amqpTransportConfig.URL)
 	kingpin.Flag("amqp-exchange", "AMQP Exchange for log message delivery").
 		Default("amq.direct").
 		Envar("AMQP_EXCHANGE").
-		StringVar(&config.amqpExchange)
+		StringVar(&config.amqpTransportConfig.Exchange)
 	kingpin.Flag("amqp-routing-key", "AMQP routing key for message delivery").
 		Default("all-other").
 		Envar("AMQP_ROUTING_KEY").
-		StringVar(&config.amqpRoutingKey)
+		StringVar(&config.amqpTransportConfig.Key)
 	kingpin.Flag("redis-url", "Where to send log messages").
 		Default("localhost:6379").
 		Envar("REDIS_URL").
-		StringVar(&config.redisURL)
+		StringVar(&config.redisTransportConfig.URL)
 	kingpin.Flag("redis-key", "Redis key for message delivery").
 		Default("k8s-logs").
 		Envar("REDIS_KEY").
-		StringVar(&config.redisKey)
+		StringVar(&config.redisTransportConfig.Key)
 	kingpin.Parse()
 
 	if config.slaTesting {
@@ -85,17 +84,17 @@ func main() {
 
 	if config.transport == "amqp" {
 		if config.createRabbitQueues {
-			createRabbitQueues(config, 30, 1)
+			createRabbitQueues(config.amqpTransportConfig, 30, 1)
 			return
 		}
 
-		testAmqp(config)
+		testAmqp(config.amqpTransportConfig)
 		return
 
 	}
 
 	// else it's redis
-	testRedis(config)
+	testRedis(config.redisTransportConfig)
 }
 
 func testMetrics() {
@@ -162,9 +161,9 @@ func testMetrics() {
 	log.Println("SLA tests ok.")
 }
 
-func testAmqp(config config) {
+func testAmqp(c configuration.AMQPTransportConfig) {
 	// establish connection to and get data from broker
-	broker, err := amqpclient.NewAMQPClient(config.amqpURL, config.amqpExchange, config.amqpRoutingKey)
+	broker, err := amqpclient.NewAMQPClient(c)
 
 	if err != nil {
 		log.Fatalf("Unable to init amqp client. %s", err)
@@ -211,9 +210,9 @@ func testAmqp(config config) {
 	log.Println("AMQP transmission tests ok")
 }
 
-func testRedis(c config) {
+func testRedis(c configuration.RedisTransportConfig) {
 	// establish connection to and get data from broker
-	client := redisclient.NewRedisClient(c.redisURL, c.redisKey)
+	client := redisclient.NewRedisClient(c)
 	defer client.Close()
 
 	expectations := getLogExpectations()
@@ -222,7 +221,6 @@ func testRedis(c config) {
 	// parse messages and compare it with expectations
 	for i := 0; i < sentRecordsCount; i++ {
 		message, err := client.ReceiveMessage()
-
 
 		if err != nil {
 			log.Fatalf("Receive failed: %s", err)
@@ -263,12 +261,12 @@ func checkMatchExpected(actual *nginxLog, expected []*nginxLog) {
 	}
 }
 
-func createRabbitQueues(config config, retries int, timeout int) {
-	var broker *amqpclient.Broker
+func createRabbitQueues(c configuration.AMQPTransportConfig, retries int, timeout int) {
+	var broker *amqpclient.AMQPClient
 	var err error
 
 	for i := 0; i < retries; i++ {
-		broker, err = amqpclient.NewAMQPClient(config.amqpURL, config.amqpExchange, config.amqpRoutingKey)
+		broker, err = amqpclient.NewAMQPClient(c)
 		if err != nil {
 			log.Printf("Try #%d, Unable to init amqp client. %s, retry after timeout %d", i, err, timeout)
 			time.Sleep(time.Duration(timeout) * time.Second)

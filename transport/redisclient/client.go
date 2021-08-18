@@ -5,6 +5,7 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 
+	"github.com/2gis/loggo/configuration"
 	"github.com/2gis/loggo/transport"
 )
 
@@ -15,9 +16,9 @@ type RedisClient struct {
 }
 
 // NewRedisClient is a constructor for RedisClient
-func NewRedisClient(hostname string, key string) *RedisClient {
+func NewRedisClient(config configuration.RedisTransportConfig) *RedisClient {
 	dialFunction := func() (redis.Conn, error) {
-		c, err := redis.Dial("tcp", hostname)
+		c, err := redis.Dial("tcp", config.URL)
 
 		if err != nil {
 			return nil, err
@@ -34,7 +35,7 @@ func NewRedisClient(hostname string, key string) *RedisClient {
 		return err
 	}
 	return &RedisClient{
-		key: key,
+		key: config.Key,
 		pool: &redis.Pool{
 			Dial:         dialFunction,
 			TestOnBorrow: testFunction,
