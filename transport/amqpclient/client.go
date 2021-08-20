@@ -7,11 +7,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+
+	"github.com/2gis/loggo/configuration"
 )
 
-// Broker represents AMQP broker which store connection and connected exchanges
-type Broker struct {
-	amqpURL     string
+// AMQPClient which store connection and connected exchanges
+type AMQPClient struct {
+	url         string
 	connection  *amqp.Connection
 	channel     *amqp.Channel
 	exchange    string
@@ -21,49 +23,51 @@ type Broker struct {
 	canceled    chan string
 }
 
-// NewLogger creates new Broker with new connection
-func NewAMQPClient(amqpURL string, exchange string, routingKey string) (*Broker, error) {
-	b := &Broker{
-		amqpURL:  amqpURL,
-		exchange: exchange,
-		key:      routingKey,
+// NewAMQPClient creates new AMQPClient with new connection
+func NewAMQPClient(config configuration.AMQPTransportConfig) (*AMQPClient, error) {
+	b := &AMQPClient{
+		url:      config.URL,
+		exchange: config.Exchange,
+		key:      config.Key,
 	}
 	err := b.connect()
+
 	if err != nil {
 		return b, err
 	}
+
 	go b.closedWatcher()
 	return b, nil
 }
 
 // connect do dial and create channel for work with broker
-func (b *Broker) connect() error {
+func (c *AMQPClient) connect() error {
 	var err error
-	b.connection, err = amqp.Dial(b.amqpURL)
+	c.connection, err = amqp.Dial(c.url)
 	if err != nil {
 		return errors.Wrap(err, "Unable to connect to amqp broker")
 	}
 
-	b.channel, err = b.connection.Channel()
+	c.channel, err = c.connection.Channel()
 	if err != nil {
 		return errors.Wrap(err, "Unable to open channel to amqp broker")
 	}
 
-	b.closed = make(chan *amqp.Error)
-	b.canceled = make(chan string)
-	b.undelivered = make(chan amqp.Return)
-	b.channel.NotifyClose(b.closed)
-	b.channel.NotifyCancel(b.canceled)
-	b.channel.NotifyReturn(b.undelivered)
+	c.closed = make(chan *amqp.Error)
+	c.canceled = make(chan string)
+	c.undelivered = make(chan amqp.Return)
+	c.channel.NotifyClose(c.closed)
+	c.channel.NotifyCancel(c.canceled)
+	c.channel.NotifyReturn(c.undelivered)
 	return nil
 }
 
-func (b *Broker) closedWatcher() {
+func (c *AMQPClient) closedWatcher() {
 	for {
-		<-b.closed
+		<-c.closed
 		log.Println("Received closed signal, need to reconnect")
 
-		if err := b.connect(); err != nil {
+		if err := c.connect(); err != nil {
 			log.Printf("Unable to connect to rabbit due to '%s'", err.Error())
 		}
 
@@ -72,13 +76,13 @@ func (b *Broker) closedWatcher() {
 }
 
 // Close close all channels and connection
-func (b *Broker) Close() error {
-	return b.connection.Close()
+func (c *AMQPClient) Close() error {
+	return c.connection.Close()
 }
 
 // DeliverMessages construct amqp.Publishings from array of array of bytes,
 // and publish each one by one to exchange
-func (b *Broker) DeliverMessages(data []string) error {
+func (c *AMQPClient) DeliverMessages(data []string) error {
 	msg := amqp.Publishing{
 		DeliveryMode: amqp.Persistent,
 		ContentType:  "application/json",
@@ -87,7 +91,7 @@ func (b *Broker) DeliverMessages(data []string) error {
 	for _, message := range data {
 		msg.Body = []byte(message)
 		msg.Timestamp = time.Now()
-		err = b.channel.Publish(b.exchange, b.key, false, false, msg)
+		err = c.channel.Publish(c.exchange, c.key, false, false, msg)
 		if err != nil {
 			return err
 		}
@@ -96,21 +100,21 @@ func (b *Broker) DeliverMessages(data []string) error {
 }
 
 // Consume returns chan amqp.Delivery for queue
-func (b *Broker) Consume(queue string) (<-chan amqp.Delivery, error) {
-	return b.channel.Consume(queue, "loggo", false, false, false, false, nil)
+func (c *AMQPClient) Consume(queue string) (<-chan amqp.Delivery, error) {
+	return c.channel.Consume(queue, "loggo", false, false, false, false, nil)
 }
 
 // CreateExchange create direct durable exchange with inited parameters in constructor
-func (b *Broker) CreateExchange() error {
-	return b.channel.ExchangeDeclare(b.exchange, "direct", true, false, false, false, nil)
+func (c *AMQPClient) CreateExchange() error {
+	return c.channel.ExchangeDeclare(c.exchange, "direct", true, false, false, false, nil)
 }
 
 // CreateQueue create queue with name and durability parameters
-func (b *Broker) CreateQueue(name string, durable bool) (amqp.Queue, error) {
-	return b.channel.QueueDeclare(name, durable, false, false, false, nil)
+func (c *AMQPClient) CreateQueue(name string, durable bool) (amqp.Queue, error) {
+	return c.channel.QueueDeclare(name, durable, false, false, false, nil)
 }
 
 // BindQueue binds queue by name to exchange setted in constructor
-func (b *Broker) BindQueue(name string) error {
-	return b.channel.QueueBind(name, b.key, b.exchange, false, nil)
+func (c *AMQPClient) BindQueue(name string) error {
+	return c.channel.QueueBind(name, c.key, c.exchange, false, nil)
 }

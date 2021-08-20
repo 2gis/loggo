@@ -59,20 +59,32 @@ type SLIExporterConfig struct {
 	AnnotationSLADomains     string
 }
 
+type RedisTransportConfig struct {
+	URL string
+	Key string
+}
+type AMQPTransportConfig struct {
+	URL      string
+	Exchange string
+	Key      string
+}
+
+type FirehoseTransportConfig struct {
+	DeliveryStream string
+}
+
 // Config stores all configuration from environment or launch keys
 type Config struct {
-	K8SExtends        K8SExtends
-	FollowerConfig    FollowerConfig
-	JournaldConfig    JournaldConfig
-	SLIExporterConfig SLIExporterConfig
+	K8SExtends              K8SExtends
+	FollowerConfig          FollowerConfig
+	JournaldConfig          JournaldConfig
+	SLIExporterConfig       SLIExporterConfig
+	FirehostTransportConfig FirehoseTransportConfig
+	AMQPTransportConfig     AMQPTransportConfig
+	RedisTransportConfig    RedisTransportConfig
 
 	TransportBufferSizeMax int
 	Transport              string
-	RedisHostname          string
-	RedisKey               string
-	AMQPURL                string
-	AMQPExchange           string
-	AMQPRoutingKey         string
 
 	LogsPath                 string
 	PositionFilePath         string
@@ -125,23 +137,27 @@ func GetConfig() Config {
 	kingpin.Flag("redis-hostname", "Where to send log messages").
 		Default("localhost:6379").
 		Envar("REDIS_HOSTNAME").
-		StringVar(&config.RedisHostname)
+		StringVar(&config.RedisTransportConfig.URL)
 	kingpin.Flag("redis-key", "Where to send log messages").
 		Default("k8s-logs").
 		Envar("REDIS_KEY").
-		StringVar(&config.RedisKey)
+		StringVar(&config.RedisTransportConfig.Key)
 	kingpin.Flag("amqp-url", "Where to send log messages").
 		Default("amqp://localhost/").
 		Envar("AMQP_URL").
-		StringVar(&config.AMQPURL)
+		StringVar(&config.AMQPTransportConfig.URL)
 	kingpin.Flag("amqp-exchange", "AMQP Exchange for log message delivery").
 		Default("amq.direct").
 		Envar("AMQP_EXCHANGE").
-		StringVar(&config.AMQPExchange)
+		StringVar(&config.AMQPTransportConfig.Exchange)
 	kingpin.Flag("amqp-routing-key", "AMQP routing key for message delivery").
 		Default("all-other").
 		Envar("AMQP_ROUTING_KEY").
-		StringVar(&config.AMQPRoutingKey)
+		StringVar(&config.AMQPTransportConfig.Key)
+	kingpin.Flag("firehose-delivery-stream", "AWS Firehose delivery stream.").
+		Default("default-delivery").
+		Envar("FIREHOSE_DELIVERY_STREAM").
+		StringVar(&config.FirehostTransportConfig.DeliveryStream)
 	kingpin.Flag("flush-interval-sec", "How often to try sending data to transport").
 		Default("60").
 		Envar("FLUSH_INTERVAL_SEC").
