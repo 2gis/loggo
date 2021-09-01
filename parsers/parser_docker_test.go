@@ -6,93 +6,242 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/2gis/loggo/common"
+	"github.com/2gis/loggo/configuration"
 )
 
-func TestParseLine(t *testing.T) {
-	// plain positive
-	out, err := ParseDockerFormat([]byte("{\"log\":\"hello world\", \"key1\":1}"))
-	assert.NoError(t, err)
-	assert.Equal(t, common.EntryMap{"log": "hello world", "key1": float64(1)}, out)
+type testCaseParserDocker struct {
+	name string
 
-	// key "log" is absent
-	_, err = ParseDockerFormat([]byte("{\"somekey\":\"hello world\"}"))
-	assert.Error(t, err)
-
-	// plain negative (bad json syntax)
-	_, err = ParseDockerFormat([]byte("{log\":\"hello world\"}"))
-	assert.Error(t, err)
-
-	// inner map positive. Can't assert for object directly cause interface{}(nil) is not equal with itself
-	out, err = ParseDockerFormat([]byte(`{"log": "{\"hello\":\"world\",\"a\": 1,\"b\": null}"}`))
-	assert.NoError(t, err)
-	assert.Equal(t, "world", out["hello"])
-	assert.Equal(t, float64(1), out["a"])
-	assert.Nil(t, out["b"])
+	config           configuration.ParserConfig
+	input            string
+	entryMapExpected common.EntryMap
+	errExpected      error
 }
 
-func TestParseUpstreamResponseTime(t *testing.T) {
-	out, err := ParseDockerFormat([]byte(`{
-		"log": "{\"upstream_response_time\":\"-\"}"
-		}`))
-	assert.NoError(t, err)
-	assert.Equal(t, "-", out[LogKeyUpstreamResponseTime])
-	assert.Equal(t, nil, out[LogKeyUpstreamResponseTimeReplacement])
+var (
+	testCasesParserDocker = []testCaseParserDocker{
+		{
+			name:             "Positive, flattening to top-level",
+			input:            "{\"log\":\"hello world\", \"key1\":1}",
+			entryMapExpected: common.EntryMap{"log": "hello world", "key1": float64(1)},
+		},
+		{
+			name:             "log field is missing",
+			input:            "{\"somekey\":\"hello world\"}",
+			entryMapExpected: nil,
+			errExpected:      errTest,
+		},
+		{
+			name:             "invalid json syntax",
+			input:            "{log\":\"hello world\"}",
+			entryMapExpected: nil,
+			errExpected:      errTest,
+		},
+		{
+			name:             "inner map positive",
+			input:            `{"log": "{\"hello\":\"world\",\"a\": 1,\"b\": null}"}`,
+			entryMapExpected: common.EntryMap{"hello": "world", "a": float64(1), "b": nil},
+		},
+	}
 
-	out, err = ParseDockerFormat([]byte(`{
-		"log": "{\"upstream_response_time\":\"0\"}"
-		}`))
-	assert.NoError(t, err)
-	assert.Equal(t, "0", out[LogKeyUpstreamResponseTime])
-	assert.Equal(t, float64(0), out[LogKeyUpstreamResponseTimeReplacement])
+	testCasesParserDockerNginxTransform = []testCaseParserDocker{
+		{
+			name:  "field contains hypen",
+			input: `{"log": "{\"upstream_response_time\":\"-\"}"}`,
+			entryMapExpected: common.EntryMap{
+				LogKeyUpstreamResponseTime: "-",
+			},
+		},
+		{
+			name:  "single zero value given as string",
+			input: `{"log": "{\"upstream_response_time\":\"0\"}"}`,
+			entryMapExpected: common.EntryMap{
+				LogKeyUpstreamResponseTime:            "0",
+				LogKeyUpstreamResponseTimeReplacement: float64(0),
+				LogKeyUpstreamResponseTimeTotal:       float64(0),
+			},
+		},
+		{
+			name:  "single non-zero value given as string",
+			input: `{"log": "{\"upstream_response_time\":\"0.009\"}"}`,
+			entryMapExpected: common.EntryMap{
+				LogKeyUpstreamResponseTime:            "0.009",
+				LogKeyUpstreamResponseTimeReplacement: float64(0.009),
+				LogKeyUpstreamResponseTimeTotal:       float64(0.009),
+			},
+		},
+		{
+			name:  "comma separated multiple value without spaces",
+			input: `{"log": "{\"upstream_response_time\":\"0.009,1.142\"}"}`,
+			entryMapExpected: common.EntryMap{
+				LogKeyUpstreamResponseTime:            "0.009,1.142",
+				LogKeyUpstreamResponseTimeReplacement: float64(1.142),
+				LogKeyUpstreamResponseTimeTotal:       float64(1.151),
+			},
+		},
+		{
+			name:  "comma separated multiple value with spaces",
+			input: `{"log": "{\"upstream_response_time\":\"0.009, 1.142, 1.222\"}"}`,
+			entryMapExpected: common.EntryMap{
+				LogKeyUpstreamResponseTime:            "0.009, 1.142, 1.222",
+				LogKeyUpstreamResponseTimeReplacement: float64(1.222),
+				LogKeyUpstreamResponseTimeTotal:       float64(2.373),
+			},
+		},
+		// not sure, maybe we should cast it to string anyway for uniformity? leaved as is to preserve early logic
+		{
+			name:  "single float value",
+			input: `{"log": "{\"upstream_response_time\":1.222}"}`,
+			entryMapExpected: common.EntryMap{
+				LogKeyUpstreamResponseTime:            float64(1.222),
+				LogKeyUpstreamResponseTimeReplacement: float64(1.222),
+				LogKeyUpstreamResponseTimeTotal:       float64(1.222),
+			},
+		},
+		{
+			name:  "value is given as json list, passed as json list, no transforms",
+			input: `{"log": "{\"upstream_response_time\":[1.142, 1.222]}"}`,
+			entryMapExpected: common.EntryMap{
+				LogKeyUpstreamResponseTime: []interface{}{1.142, 1.222},
+			},
+		},
+		{
+			name:  "upstream_response_time contains dict",
+			input: `{"log": "{\"upstream_response_time\":{\"value\": 1.142}}"}`,
+			entryMapExpected: common.EntryMap{
+				LogKeyUpstreamResponseTime + ".value": float64(1.142),
+			},
+		},
+	}
 
-	out, err = ParseDockerFormat([]byte(`{
-		"log": "{\"upstream_response_time\":\"0.009\"}"
-		}`))
-	assert.NoError(t, err)
-	assert.Equal(t, "0.009", out[LogKeyUpstreamResponseTime])
-	assert.Equal(t, float64(0.009), out[LogKeyUpstreamResponseTimeReplacement])
+	testCasesParserDockerSubmaps = []testCaseParserDocker{
+		{
+			name: "user log set to separate field, not flattened",
+			config: configuration.ParserConfig{
+				UserLogTargetKey: "user_log",
+				DockerFieldsKey:  "docker",
+				FlattenUserLog:   false,
+			},
+			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
+			entryMapExpected: common.EntryMap{
+				"user_log": map[string]interface{}{"time": map[string]interface{}{"value": 1.142}},
+				"docker":   map[string]interface{}{"time": "2018-01-09T05:08:03.100481875Z"},
+			},
+		},
+		{
+			name: "user log set to separate field, flattened",
+			config: configuration.ParserConfig{
+				UserLogTargetKey: "user_log",
+				DockerFieldsKey:  "docker",
+				FlattenUserLog:   true,
+			},
+			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
+			entryMapExpected: common.EntryMap{
+				"user_log": map[string]interface{}{"time.value": 1.142},
+				"docker":   map[string]interface{}{"time": "2018-01-09T05:08:03.100481875Z"},
+			},
+		},
+		{
+			name: "flattening is on, user log field is empty, user log expected in top level dict",
+			config: configuration.ParserConfig{
+				UserLogTargetKey: "",
+				DockerFieldsKey:  "docker",
+				FlattenUserLog:   true,
+			},
+			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
+			entryMapExpected: common.EntryMap{
+				"time.value": 1.142,
+				"docker":     map[string]interface{}{"time": "2018-01-09T05:08:03.100481875Z"},
+			},
+		},
+		{
+			name: "flattening is off, user log field is empty, user log expected in log field of top level dict",
+			config: configuration.ParserConfig{
+				UserLogTargetKey: "",
+				DockerFieldsKey:  "docker",
+				FlattenUserLog:   false,
+			},
+			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
+			entryMapExpected: common.EntryMap{
+				"log":    map[string]interface{}{"time": map[string]interface{}{"value": 1.142}},
+				"docker": map[string]interface{}{"time": "2018-01-09T05:08:03.100481875Z"},
+			},
+		},
+		{
+			name: "flattening is on, user log field key and docker fields key is empty, " +
+				"user log expected to override docker variables (legacy behavior)",
+			config: configuration.ParserConfig{
+				UserLogTargetKey: "",
+				DockerFieldsKey:  "",
+				FlattenUserLog:   true,
+			},
+			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\": 1.142, \"test\": \"value\"}"}`,
+			entryMapExpected: common.EntryMap{
+				"time": 1.142,
+				"test": "value",
+			},
+		},
+	}
+)
 
-	out, err = ParseDockerFormat([]byte(`{
-		"log": "{\"upstream_response_time\":\"0.009,1.142\"}"
-		}`))
-	assert.NoError(t, err)
-	assert.Equal(t, "0.009,1.142", out[LogKeyUpstreamResponseTime])
-	assert.Equal(t, float64(1.142), out[LogKeyUpstreamResponseTimeReplacement])
-	assert.Equal(t, float64(1.151), out[LogKeyUpstreamResponseTimeTotal])
+func TestParseLineBasic(t *testing.T) {
+	for _, testCase := range testCasesParserDocker {
+		t.Run(testCase.name, func(t *testing.T) {
+			parser := CreateParserDockerFormat(configFlattenTopLevel())
 
-	out, err = ParseDockerFormat([]byte(`{
-		"log": "{\"upstream_response_time\":\"0.009, 1.142, 1.222\"}"
-		}`))
-	assert.NoError(t, err)
-	assert.Equal(t, "0.009, 1.142, 1.222", out[LogKeyUpstreamResponseTime])
-	assert.Equal(t, float64(1.222), out[LogKeyUpstreamResponseTimeReplacement])
-	assert.Equal(t, float64(2.373), out[LogKeyUpstreamResponseTimeTotal])
+			out, err := parser([]byte(testCase.input))
+			assert.Equal(t, testCase.entryMapExpected, out)
 
-	// maybe convert to string anyway?..
-	out, err = ParseDockerFormat([]byte(`{
-		"log": "{\"upstream_response_time\":1.222}"
-		}`))
-	assert.NoError(t, err)
-	assert.Equal(t, float64(1.222), out[LogKeyUpstreamResponseTime])
-	assert.Equal(t, float64(1.222), out[LogKeyUpstreamResponseTimeReplacement])
+			if testCase.errExpected != nil {
+				assert.Error(t, err)
+				return
+			}
 
-	out, err = ParseDockerFormat([]byte(`{
-		"log": "{\"upstream_response_time\":11}"
-		}`))
-	assert.NoError(t, err)
-	assert.Equal(t, float64(11), out[LogKeyUpstreamResponseTime])
-	assert.Equal(t, float64(11), out[LogKeyUpstreamResponseTimeReplacement])
+			assert.NoError(t, err)
+		})
+	}
+}
 
-	out, err = ParseDockerFormat([]byte(`{
-		"log": "{\"upstream_response_time\":[1.142, 1.222]}"
-		}`))
-	assert.NoError(t, err)
-	assert.Equal(t, []interface{}{1.142, 1.222}, out[LogKeyUpstreamResponseTime])
-	assert.Nil(t, out[LogKeyUpstreamResponseTimeReplacement])
+func TestParseLineNginxTransforms(t *testing.T) {
+	for _, testCase := range testCasesParserDockerNginxTransform {
+		t.Run(testCase.name, func(t *testing.T) {
+			parser := CreateParserDockerFormat(configFlattenTopLevel())
 
-	out, err = ParseDockerFormat([]byte(`{
-		"log": "{\"upstream_response_time\":{\"value\": 1.142}}"
-		}`))
-	assert.NoError(t, err)
-	assert.Equal(t, float64(1.142), out[LogKeyUpstreamResponseTime+".value"])
+			out, err := parser([]byte(testCase.input))
+			assert.Equal(t, testCase.entryMapExpected, out)
+
+			if testCase.errExpected != nil {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestSeparateDockerUserLogFieldsSet(t *testing.T) {
+	for _, testCase := range testCasesParserDockerSubmaps {
+		t.Run(testCase.name, func(t *testing.T) {
+			parser := CreateParserDockerFormat(testCase.config)
+
+			out, err := parser([]byte(testCase.input))
+			assert.Equal(t, testCase.entryMapExpected, out)
+
+			if testCase.errExpected != nil {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func configFlattenTopLevel() configuration.ParserConfig {
+	return configuration.ParserConfig{
+		UserLogTargetKey: "",
+		DockerFieldsKey:  "",
+		FlattenUserLog:   true,
+	}
 }

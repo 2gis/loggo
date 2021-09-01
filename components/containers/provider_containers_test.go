@@ -136,7 +136,6 @@ func TestContainersProvider(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(containers))
 
-	fmt.Println(containers)
 	container := containers["/tmp/loggo-tests/loggo-containers/123abc/123abc-json.log"]
 	assert.Equal(t, "service", container.GetName())
 	assert.Equal(t, "123abc", container.GetPodName())

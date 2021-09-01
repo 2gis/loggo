@@ -38,6 +38,14 @@ type FollowerConfig struct {
 	FromTailFlag                      bool
 }
 
+type ParserConfig struct {
+	UserLogTargetKey string
+	DockerFieldsKey  string
+	ExtendsFieldsKey   string
+
+	FlattenUserLog bool
+}
+
 type JournaldConfig struct {
 	LogJournalD   bool
 	JournaldPath  string
@@ -77,6 +85,7 @@ type FirehoseTransportConfig struct {
 // Config stores all configuration from environment or launch keys
 type Config struct {
 	K8SExtends              K8SExtends
+	ParserConfig            ParserConfig
 	FollowerConfig          FollowerConfig
 	JournaldConfig          JournaldConfig
 	SLIExporterConfig       SLIExporterConfig
@@ -284,6 +293,26 @@ func GetConfig() Config {
 		Default(AnnotationSLADomainsDefault).
 		Envar("SLA_SERVICE_ANNOTATION_DOMAINS").
 		StringVar(&config.SLIExporterConfig.AnnotationSLADomains)
+
+	kingpin.Flag("user-log-target-field", "Entry field where user log should be put.").
+		Default("log").
+		Envar("USER_LOG_TARGET_FIELD").
+		StringVar(&config.ParserConfig.UserLogTargetKey)
+
+	kingpin.Flag("docker-fields-key", "Entry field where docker/containerd engine fields map should be put.").
+		Default("docker").
+		Envar("DOCKER_FIELDS_KEY").
+		StringVar(&config.ParserConfig.DockerFieldsKey)
+
+	kingpin.Flag("extends-fields-key", "Entry field where loggo and k8s extends fields map should be put.").
+		Default("environment").
+		Envar("EXTENDS_FIELDS_KEY").
+		StringVar(&config.ParserConfig.ExtendsFieldsKey)
+
+	kingpin.Flag("flatten-user-log", "Whether to flatten user log or not.").
+		Default("true").
+		Envar("FLATTEN_USER_LOG").
+		BoolVar(&config.ParserConfig.FlattenUserLog)
 
 	kingpin.Flag("metrics-reset-interval-sec", "Prometheus metrics reset interval.").
 		Default("172800").
