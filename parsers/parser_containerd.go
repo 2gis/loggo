@@ -1,57 +1,48 @@
 package parsers
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 
 	"github.com/2gis/loggo/common"
+	"github.com/2gis/loggo/configuration"
 )
 
 var (
 	r = regexp.MustCompile("(?s)^(.+) (stdout|stderr) . (.*)$")
 )
 
-// ParseContainerDFormat is a parser for inflated json log record
-func ParseContainerDFormat(line []byte) (common.EntryMap, error) {
-	lineString := string(line)
-	output := r.FindStringSubmatch(lineString)
+// CreateParserContainerDFormat returns containerd parser
+func CreateParserContainerDFormat(config configuration.ParserConfig) func(line []byte) (common.EntryMap, error) {
+	return func(line []byte) (common.EntryMap, error) {
+		lineString := string(line)
+		output := r.FindStringSubmatch(lineString)
 
-	if len(output) != containerDLineGroupsCount {
-		return nil, fmt.Errorf("unable to parse containerd line '%s'", lineString)
-	}
+		if len(output) != containerDLineGroupsCount {
+			return nil, fmt.Errorf("unable to parse containerd line '%s'", lineString)
+		}
 
-	var outer = make(common.EntryMap)
+		var outer = make(common.EntryMap)
 
-	outer[LogKeyTime] = output[1]
-	outer[LogKeyStream] = output[2]
-	outer[LogKeyLog] = output[3]
+		setContainerDFields(outer, config.DockerFieldsKey, output[1], output[2])
 
-	var inner interface{}
+		if err := setLogFieldContent(outer, config.UserLogTargetKey, output[3], config.FlattenUserLog); err != nil {
+			return nil, fmt.Errorf("error setting user log field: %w", err)
+		}
 
-	err := json.Unmarshal([]byte(output[3]), &inner)
-	innerMap, ok := inner.(map[string]interface{})
-
-	if err != nil || !ok {
 		return outer, nil
 	}
+}
 
-	delete(outer, "log")
-
-	if err := common.Flatten(outer, innerMap); err != nil {
-		return nil, err
+func setContainerDFields(entryMap common.EntryMap, targetField, time, stream string) {
+	if targetField == "" {
+		entryMap[LogKeyTime] = time
+		entryMap[LogKeyStream] = stream
+		return
 	}
 
-	// nginx specific transforms, by convention
-	if value, ok := outer[LogKeyUpstreamResponseTime]; ok {
-		if transformed, err := nginxUpstreamTimeTransform(value, false); err == nil {
-			outer[LogKeyUpstreamResponseTimeReplacement] = transformed
-		}
-
-		if transformed, err := nginxUpstreamTimeTransform(value, true); err == nil {
-			outer[LogKeyUpstreamResponseTimeTotal] = transformed
-		}
-	}
-
-	return outer, nil
+	fields := make(map[string]interface{})
+	fields[LogKeyTime] = time
+	fields[LogKeyStream] = stream
+	entryMap[targetField] = fields
 }

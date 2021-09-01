@@ -2,57 +2,109 @@ package parsers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/2gis/loggo/common"
+	"github.com/2gis/loggo/configuration"
 )
 
-// ParseDockerFormat is a parser for inflated json log record
-func ParseDockerFormat(line []byte) (common.EntryMap, error) {
-	var outer common.EntryMap
+var (
+	ErrLogFieldMissing   = errors.New("line does not contain user log field")
+	ErrLogFieldNotString = errors.New("user log field does not contain string")
+)
 
-	if err := json.Unmarshal(line, &outer); err != nil {
-		return nil, fmt.Errorf("outer json unmarshalling, %s", err)
+func CreateParserDockerFormat(config configuration.ParserConfig) func(line []byte) (common.EntryMap, error) {
+	return func(line []byte) (common.EntryMap, error) {
+		var outer common.EntryMap
+
+		if err := json.Unmarshal(line, &outer); err != nil {
+			return nil, fmt.Errorf("outer json unmarshalling, %s", err)
+		}
+
+		logFieldContent, ok := outer[LogKeyLog]
+
+		if !ok {
+			return nil, fmt.Errorf("%w: line '%s'", ErrLogFieldMissing, line)
+		}
+
+		logFieldContentString, ok := logFieldContent.(string)
+
+		if !ok {
+			return nil, fmt.Errorf("%w: line '%s'", ErrLogFieldNotString, line)
+		}
+
+		delete(outer, LogKeyLog)
+		setDockerFields(outer, config.DockerFieldsKey)
+
+		if err := setLogFieldContent(
+			outer, config.UserLogTargetKey, logFieldContentString, config.FlattenUserLog); err != nil {
+			return nil, fmt.Errorf("error setting user log field: %w", err)
+		}
+
+		return outer, nil
+	}
+}
+
+func setDockerFields(entryMap common.EntryMap, targetField string) {
+	if targetField == "" {
+		return
 	}
 
-	logFieldContent, ok := outer[LogKeyLog]
-
-	if !ok {
-		return nil, fmt.Errorf("parse error, line '%s', doesn't contain '%s' field", line, LogKeyLog)
+	if len(entryMap) == 0 {
+		return
 	}
 
-	logFieldContentString, ok := logFieldContent.(string)
+	dockerFields := make(map[string]interface{})
 
-	if !ok {
-		return nil, fmt.Errorf("parse error, line '%s', '%s' field does not contain string", line, LogKeyLog)
+	for k, v := range entryMap {
+		dockerFields[k] = v
+		delete(entryMap, k)
 	}
 
+	entryMap[targetField] = dockerFields
+}
+
+func setLogFieldContent(entryMap common.EntryMap, targetField, JSONContent string, flatten bool) error {
 	var inner interface{}
 
-	err := json.Unmarshal([]byte(logFieldContentString), &inner)
+	err := json.Unmarshal([]byte(JSONContent), &inner)
 	innerMap, ok := inner.(map[string]interface{})
 
 	if err != nil || !ok {
-		outer[LogKeyLog] = logFieldContentString
-		return outer, nil
-	}
-
-	delete(outer, LogKeyLog)
-
-	if err := common.Flatten(outer, innerMap); err != nil {
-		return nil, err
-	}
-
-	// nginx specific transforms, by convention
-	if value, ok := outer[LogKeyUpstreamResponseTime]; ok {
-		if transformed, err := nginxUpstreamTimeTransform(value, false); err == nil {
-			outer[LogKeyUpstreamResponseTimeReplacement] = transformed
+		if targetField == "" {
+			entryMap[LogKeyLog] = JSONContent
+			return nil
 		}
 
-		if transformed, err := nginxUpstreamTimeTransform(value, true); err == nil {
-			outer[LogKeyUpstreamResponseTimeTotal] = transformed
-		}
+		entryMap[targetField] = JSONContent
+		return nil
 	}
 
-	return outer, nil
+	processNginxFields(innerMap)
+
+	if !flatten {
+		// flatten flag is not set and the target field is empty, we still need some field to set content to.
+		if targetField == "" {
+			entryMap[LogKeyLog] = innerMap
+			return nil
+		}
+
+		entryMap[targetField] = innerMap
+		return nil
+	}
+
+	// unpack to top level dict, backward compatibility
+	if targetField == "" {
+		return common.Flatten(entryMap, innerMap)
+	}
+
+	innerMapUnpacked := make(map[string]interface{})
+
+	if err := common.Flatten(innerMapUnpacked, innerMap); err != nil {
+		return err
+	}
+
+	entryMap[targetField] = innerMapUnpacked
+	return nil
 }

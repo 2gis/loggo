@@ -45,7 +45,7 @@ func TestStageParsingEntryTest(t *testing.T) {
 	}
 
 	input := make(chan *common.Entry, len(expectations))
-	stage := NewStageParsingEntry(input, parserFunctionTest, nil, parserFunctionDefaultTest, logging.NewLoggerDefault())
+	stage := NewStageParsingEntry(input, parserFunctionTest, nil, parserFunctionDefaultTest, "", logging.NewLoggerDefault())
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 

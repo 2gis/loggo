@@ -5,9 +5,23 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/2gis/loggo/common"
 )
 
 var errInvalidNginxTimestamp = errors.New("upstream response time key doesn't contain proper value")
+
+func processNginxFields(outer common.EntryMap) {
+	if value, ok := outer[LogKeyUpstreamResponseTime]; ok {
+		if transformed, err := nginxUpstreamTimeTransform(value, false); err == nil {
+			outer[LogKeyUpstreamResponseTimeReplacement] = transformed
+		}
+
+		if transformed, err := nginxUpstreamTimeTransform(value, true); err == nil {
+			outer[LogKeyUpstreamResponseTimeTotal] = transformed
+		}
+	}
+}
 
 func nginxUpstreamTimeTransform(value interface{}, total bool) (float64, error) {
 	if v, ok := value.(float64); ok {

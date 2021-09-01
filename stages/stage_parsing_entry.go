@@ -21,6 +21,8 @@ type StageParsingEntry struct {
 	parseContainerDFormat ParserFunction
 	parseDefault          ParserFunctionDefault
 
+	extendsField string
+
 	input  <-chan *common.Entry
 	output chan common.EntryMap
 }
@@ -38,13 +40,15 @@ func (s *StageParsingEntry) Close() {
 
 // NewStageParsingEntry is a StageParsingEntry constructor
 func NewStageParsingEntry(input <-chan *common.Entry, parseDocker, parseContainerD ParserFunction,
-	parserDefault ParserFunctionDefault, logger logging.Logger) *StageParsingEntry {
+	parserDefault ParserFunctionDefault, extendsField string, logger logging.Logger) *StageParsingEntry {
 	stage := &StageParsingEntry{
 		stage: stage{wg: &sync.WaitGroup{}, logger: logger},
 
 		parseDockerFormat:     parseDocker,
 		parseContainerDFormat: parseContainerD,
 		parseDefault:          parserDefault,
+
+		extendsField: extendsField,
 
 		input:  input,
 		output: make(chan common.EntryMap),
@@ -73,7 +77,12 @@ func (s *StageParsingEntry) proceed() {
 			entryMap = s.parseDefault(message.Origin)
 		}
 
-		entryMap.Extend(message.Extends)
+		if s.extendsField != "" {
+			entryMap[s.extendsField] = message.Extends
+		} else {
+			entryMap.Extend(message.Extends)
+		}
+
 		s.output <- entryMap
 	}
 }
