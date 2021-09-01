@@ -295,17 +295,17 @@ func GetConfig() Config {
 		StringVar(&config.SLIExporterConfig.AnnotationSLADomains)
 
 	kingpin.Flag("user-log-target-field", "Entry field where user log should be put.").
-		Default("log").
+		Default("").
 		Envar("USER_LOG_TARGET_FIELD").
 		StringVar(&config.ParserConfig.UserLogTargetKey)
 
 	kingpin.Flag("docker-fields-key", "Entry field where docker/containerd engine fields map should be put.").
-		Default("docker").
+		Default("").
 		Envar("DOCKER_FIELDS_KEY").
 		StringVar(&config.ParserConfig.DockerFieldsKey)
 
 	kingpin.Flag("extends-fields-key", "Entry field where loggo and k8s extends fields map should be put.").
-		Default("environment").
+		Default("").
 		Envar("EXTENDS_FIELDS_KEY").
 		StringVar(&config.ParserConfig.ExtendsFieldsKey)
 
