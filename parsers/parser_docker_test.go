@@ -118,8 +118,8 @@ var (
 		{
 			name: "user log set to separate field, not flattened",
 			config: configuration.ParserConfig{
-				UserLogTargetKey: "user_log",
-				DockerFieldsKey:  "docker",
+				UserLogFieldsKey: "user_log",
+				CRIFieldsKey:     "docker",
 				FlattenUserLog:   false,
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
@@ -131,8 +131,8 @@ var (
 		{
 			name: "user log set to separate field, flattened",
 			config: configuration.ParserConfig{
-				UserLogTargetKey: "user_log",
-				DockerFieldsKey:  "docker",
+				UserLogFieldsKey: "user_log",
+				CRIFieldsKey:     "docker",
 				FlattenUserLog:   true,
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
@@ -144,8 +144,8 @@ var (
 		{
 			name: "flattening is on, user log field is empty, user log expected in top level dict",
 			config: configuration.ParserConfig{
-				UserLogTargetKey: "",
-				DockerFieldsKey:  "docker",
+				UserLogFieldsKey: "",
+				CRIFieldsKey:     "docker",
 				FlattenUserLog:   true,
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
@@ -157,8 +157,8 @@ var (
 		{
 			name: "flattening is off, user log field is empty, user log expected in log field of top level dict",
 			config: configuration.ParserConfig{
-				UserLogTargetKey: "",
-				DockerFieldsKey:  "docker",
+				UserLogFieldsKey: "",
+				CRIFieldsKey:     "docker",
 				FlattenUserLog:   false,
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
@@ -171,8 +171,8 @@ var (
 			name: "flattening is on, user log field key and docker fields key is empty, " +
 				"user log expected to override docker variables (legacy behavior)",
 			config: configuration.ParserConfig{
-				UserLogTargetKey: "",
-				DockerFieldsKey:  "",
+				UserLogFieldsKey: "",
+				CRIFieldsKey:     "",
 				FlattenUserLog:   true,
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\": 1.142, \"test\": \"value\"}"}`,
@@ -240,8 +240,8 @@ func TestSeparateDockerUserLogFieldsSet(t *testing.T) {
 
 func configFlattenTopLevel() configuration.ParserConfig {
 	return configuration.ParserConfig{
-		UserLogTargetKey: "",
-		DockerFieldsKey:  "",
+		UserLogFieldsKey: "",
+		CRIFieldsKey:     "",
 		FlattenUserLog:   true,
 	}
 }

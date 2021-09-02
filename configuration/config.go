@@ -39,9 +39,9 @@ type FollowerConfig struct {
 }
 
 type ParserConfig struct {
-	UserLogTargetKey string
-	DockerFieldsKey  string
-	ExtendsFieldsKey   string
+	UserLogFieldsKey string
+	CRIFieldsKey     string
+	ExtendsFieldsKey string
 
 	FlattenUserLog bool
 }
@@ -290,15 +290,15 @@ func GetConfig() Config {
 		Envar("SLA_SERVICE_ANNOTATION_DOMAINS").
 		StringVar(&config.SLIExporterConfig.AnnotationSLADomains)
 
-	kingpin.Flag("user-log-target-field", "Entry field where user log should be put.").
+	kingpin.Flag("user-log-fields-key", "Entry field where user log should be put.").
 		Default("").
-		Envar("USER_LOG_TARGET_FIELD").
-		StringVar(&config.ParserConfig.UserLogTargetKey)
+		Envar("USER_LOG_FIELDS_KEY").
+		StringVar(&config.ParserConfig.UserLogFieldsKey)
 
-	kingpin.Flag("docker-fields-key", "Entry field where docker/containerd engine fields map should be put.").
+	kingpin.Flag("cri-fields-key", "Entry field where docker/containerd engine fields map should be put.").
 		Default("").
-		Envar("DOCKER_FIELDS_KEY").
-		StringVar(&config.ParserConfig.DockerFieldsKey)
+		Envar("cri_FIELDS_KEY").
+		StringVar(&config.ParserConfig.CRIFieldsKey)
 
 	kingpin.Flag("extends-fields-key", "Entry field where loggo and k8s extends fields map should be put.").
 		Default("").

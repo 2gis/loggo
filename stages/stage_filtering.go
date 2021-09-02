@@ -11,6 +11,8 @@ import (
 // StageFiltering filters messages from input
 type StageFiltering struct {
 	stage
+	userLogField string
+
 	input  <-chan common.EntryMap
 	output chan common.EntryMap
 }
@@ -27,11 +29,12 @@ func (s *StageFiltering) Close() {
 }
 
 // NewStageFiltering is a StageFiltering constructor
-func NewStageFiltering(input <-chan common.EntryMap, logger logging.Logger) *StageFiltering {
+func NewStageFiltering(input <-chan common.EntryMap, userLogField string, logger logging.Logger) *StageFiltering {
 	stage := &StageFiltering{
-		stage:  stage{wg: &sync.WaitGroup{}, logger: logger},
-		input:  input,
-		output: make(chan common.EntryMap),
+		stage:        stage{wg: &sync.WaitGroup{}, logger: logger},
+		userLogField: userLogField,
+		input:        input,
+		output:       make(chan common.EntryMap),
 	}
 	stage.stage.proceed = stage.proceed
 	return stage
@@ -39,19 +42,31 @@ func NewStageFiltering(input <-chan common.EntryMap, logger logging.Logger) *Sta
 
 func (s *StageFiltering) proceed() {
 	for message := range s.input {
-		loggingFlag := true
-
-		if flag, ok := message[parsers.LogKeyLogging].(bool); ok {
-			loggingFlag = flag
+		if s.userLogField == "" {
+			if !filterOutSerivceFields(message) {
+				continue
+			}
 		}
 
-		delete(message, parsers.LogKeyLogging)
-		delete(message, parsers.LogKeySLA)
-
-		if !loggingFlag {
-			continue
+		if v, ok := message[s.userLogField].(map[string]interface{}); ok {
+			if !filterOutSerivceFields(v) {
+				continue
+			}
 		}
 
 		s.output <- message
 	}
+}
+
+func filterOutSerivceFields(message map[string]interface{}) bool {
+	loggingFlag := true
+
+	if flag, ok := message[parsers.LogKeyLogging].(bool); ok {
+		loggingFlag = flag
+	}
+
+	delete(message, parsers.LogKeyLogging)
+	delete(message, parsers.LogKeySLA)
+
+	return loggingFlag
 }
