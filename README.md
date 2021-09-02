@@ -204,8 +204,10 @@ Log line is a plain string of known format.
 
 ### Log fields transformations
 
-#### Default (legacy behavior) configuration 
+#### Default (legacy behavior) configuration
+
 Let's say we have docker engine log string:
+
 ```
 {"log":"{ \"sla\":             true, \"remote_addr\":             \"10.154.18.198\", \"remote_user\":             \"\", \"time_local\":              \"09/Jan/2018:12:07:48 +0700\", \"time_msec\":               \"1515474468.396\",\"request_method\": \"POST\", \"server_protocol\": \"HTTP/1.1\", \"request_uri\":                 \"/api/mis/getlocation\", \"status\":                   200, \"host\":                    \"api.2gis.com\", \"request_time\":             0.010, \"upstream_response_time\":  \"0.020, 0.078\", \"body_bytes_sent\":          213, \"http_referer\":            \"https://cerebro.2gis.test/\", \"http_user_agent\":         \"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:57.0) Gecko/20100101 Firefox/57.0\", \"request_id\":              \"d010f6631c81407596a7ff19aaf6312b\", \"geoip.location\":          \"0,0\", \"upstream_request_id\":     \"\" }\n","stream":"stderr","time":"2018-01-09T05:08:03.100481875Z"}
 ```
@@ -267,28 +269,36 @@ given that "container", "namespace" and "pod" are the container, namespace and p
 container's `config.v2.json` file or containerd container path.
 
 #### Fields unpacking control
+
 In general, the fields that will make up the resulting message are divided into three groups:
+
 * user log fields
 * docker/cri message top level fields
 * fields that Loggo sets up from the environment: container info, CLI parameters.
 
-For each group, one can select a field in the top-level map where you want to place the group's fields.
-These keys can be set via `user-log-fields-key`/`USER_LOG_FIELDS_KEY`, `cri-fields-key`/`CRI_FIELDS_KEY`, and `extends-fields-key`/`EXTENDS_FIELDS_KEY`.
-Flattening of user log is enabled by default, but can be disabled using `flatten-user-log`/`FLATTEN_USER_LOG`.
+For each group, one can select a field in the top-level map where you want to place the group's fields. These keys can
+be set via `user-log-fields-key`/`USER_LOG_FIELDS_KEY`, `cri-fields-key`/`CRI_FIELDS_KEY`, and `extends-fields-key`
+/`EXTENDS_FIELDS_KEY`. Flattening of user log is enabled by default, but can be disabled using `flatten-user-log`
+/`FLATTEN_USER_LOG`.
 
 Example:
 Input string:
+
 ```
 {"log":"{ \"sla\":             true, \"remote_addr\":             \"10.154.18.198\", \"remote_user\":             \"\", \"time_local\":              \"09/Jan/2018:12:07:48 +0700\", \"time_msec\":               \"1515474468.396\",\"request_method\": \"POST\", \"server_protocol\": \"HTTP/1.1\", \"request_uri\":                 \"/api/mis/getlocation\", \"status\":                   200, \"host\":                    \"api.2gis.com\", \"request_time\":             0.010, \"upstream_response_time\":  \"0.020, 0.078\", \"body_bytes_sent\":          213, \"http_referer\":            \"https://cerebro.2gis.test/\", \"http_user_agent\":         \"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:57.0) Gecko/20100101 Firefox/57.0\", \"request_id\":              \"d010f6631c81407596a7ff19aaf6312b\", \"geoip.location\":          \"0,0\", \"upstream_request_id\":     \"\" }\n","stream":"stderr","time":"2018-01-09T05:08:03.100481875Z"}
 ```
+
 Loggo is started with parameters:
+
 ```
   --no-flatten-user-log
   --user-log-fields-key="log"
   --cri-fields-key="cri"
   --extends-fields-key="environment"
 ```
+
 Environment variables are taken at random. Resulting output entry map would look like this:
+
 ```
 {
 	"cri": {
@@ -330,8 +340,11 @@ Environment variables are taken at random. Resulting output entry map would look
 	}
 }
 ```
-This logic is trying to avoid possible overrides between user log and environment fields.
-Using the same values of control keys is not recommended, as it can lead to the loss of values of certain fields.
+
+This keys-based approach is a try to avoid possible overwrites between user log and environment fields, but preserving
+backward compatibility. Using the same values of control keys is not recommended, as it can lead to the loss of values
+of certain fields.
+
 ### Reserved fields
 
 Some field names are considered service ones and **are removed** from the record after processing. Incomplete list of

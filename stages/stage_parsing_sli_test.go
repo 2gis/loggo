@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/2gis/loggo/common"
 	"github.com/2gis/loggo/logging"
 	"github.com/2gis/loggo/tests/mocks"
@@ -13,7 +14,7 @@ import (
 func TestStageParsingSLITest(t *testing.T) {
 	input := make(chan common.EntryMap)
 	parser := mocks.NewSLIMock()
-	stage := NewStageParsingSLI(input, parser, logging.NewLoggerDefault())
+	stage := NewStageParsingSLI(input, "", parser, logging.NewLoggerDefault())
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
