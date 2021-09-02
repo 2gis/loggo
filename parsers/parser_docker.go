@@ -35,10 +35,10 @@ func CreateParserDockerFormat(config configuration.ParserConfig) func(line []byt
 		}
 
 		delete(outer, LogKeyLog)
-		setDockerFields(outer, config.DockerFieldsKey)
+		setDockerFields(outer, config.CRIFieldsKey)
 
 		if err := setLogFieldContent(
-			outer, config.UserLogTargetKey, logFieldContentString, config.FlattenUserLog); err != nil {
+			outer, config.UserLogFieldsKey, logFieldContentString, config.FlattenUserLog); err != nil {
 			return nil, fmt.Errorf("error setting user log field: %w", err)
 		}
 

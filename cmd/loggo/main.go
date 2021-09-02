@@ -188,6 +188,7 @@ func main() {
 	)
 	stageFiltering := stages.NewStageFiltering(
 		stageParsingSLI.Out(),
+		config.ParserConfig.UserLogFieldsKey,
 		logger,
 	)
 	stageMarshalling := stages.NewStageJSONMarshalling(
