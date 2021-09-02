@@ -11,7 +11,8 @@ import (
 type StageParsingSLI struct {
 	stage
 
-	parser ParserSLI
+	userLogField string
+	parser       ParserSLI
 
 	input  <-chan common.EntryMap
 	output chan common.EntryMap
@@ -29,12 +30,13 @@ func (s *StageParsingSLI) Close() {
 }
 
 // NewStageParsingSLI is a StageParsingSLI
-func NewStageParsingSLI(input <-chan common.EntryMap, parser ParserSLI, logger logging.Logger) *StageParsingSLI {
+func NewStageParsingSLI(input <-chan common.EntryMap, userLogField string, parser ParserSLI, logger logging.Logger) *StageParsingSLI {
 	stage := &StageParsingSLI{
-		stage:  stage{wg: &sync.WaitGroup{}, logger: logger},
-		parser: parser,
-		input:  input,
-		output: make(chan common.EntryMap),
+		stage:        stage{wg: &sync.WaitGroup{}, logger: logger},
+		userLogField: userLogField,
+		parser:       parser,
+		input:        input,
+		output:       make(chan common.EntryMap),
 	}
 	stage.stage.proceed = stage.proceed
 	return stage
@@ -42,7 +44,15 @@ func NewStageParsingSLI(input <-chan common.EntryMap, parser ParserSLI, logger l
 
 func (s *StageParsingSLI) proceed() {
 	for message := range s.input {
-		s.parser.Parse(message)
-		s.output <- message
+		if s.userLogField == "" {
+			s.parser.Parse(message)
+			s.output <- message
+			continue
+		}
+
+		if v, ok := message[s.userLogField].(map[string]interface{}); ok {
+			s.parser.Parse(v)
+			s.output <- message
+		}
 	}
 }

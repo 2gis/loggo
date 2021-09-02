@@ -183,6 +183,7 @@ func main() {
 
 	stageParsingSLI := stages.NewStageParsingSLI(
 		stageParsing.Out(),
+		config.ParserConfig.UserLogFieldsKey,
 		parserSLI,
 		logger,
 	)
