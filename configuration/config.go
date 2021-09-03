@@ -60,8 +60,9 @@ type SLIExporterConfig struct {
 }
 
 type RedisTransportConfig struct {
-	URL string
-	Key string
+	URL      string
+	Password string
+	Key      string
 }
 type AMQPTransportConfig struct {
 	URL      string
@@ -134,15 +135,18 @@ func GetConfig() Config {
 		Default("amqp").
 		Envar("TRANSPORT").
 		StringVar(&config.Transport)
-	kingpin.Flag("redis-hostname", "Where to send log messages").
+	kingpin.Flag("redis-hostname", "Redis host URL to use.").
 		Default("localhost:6379").
 		Envar("REDIS_HOSTNAME").
 		StringVar(&config.RedisTransportConfig.URL)
-	kingpin.Flag("redis-key", "Where to send log messages").
+	kingpin.Flag("redis-password", "Redis password to use.").
+		Envar("REDIS_PASSWORD").
+		StringVar(&config.RedisTransportConfig.Password)
+	kingpin.Flag("redis-key", "Key of a list in Redis where to send messages.").
 		Default("k8s-logs").
 		Envar("REDIS_KEY").
 		StringVar(&config.RedisTransportConfig.Key)
-	kingpin.Flag("amqp-url", "Where to send log messages").
+	kingpin.Flag("amqp-url", "AMQP host URL to use.").
 		Default("amqp://localhost/").
 		Envar("AMQP_URL").
 		StringVar(&config.AMQPTransportConfig.URL)

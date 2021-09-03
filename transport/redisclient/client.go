@@ -18,7 +18,7 @@ type RedisClient struct {
 // NewRedisClient is a constructor for RedisClient
 func NewRedisClient(config configuration.RedisTransportConfig) *RedisClient {
 	dialFunction := func() (redis.Conn, error) {
-		c, err := redis.Dial("tcp", config.URL)
+		c, err := redis.Dial("tcp", config.URL, redis.DialPassword(config.Password))
 
 		if err != nil {
 			return nil, err
