@@ -7,6 +7,7 @@ import (
 
 	"github.com/2gis/loggo/common"
 	"github.com/2gis/loggo/components/containers"
+	"github.com/2gis/loggo/configuration"
 	"github.com/2gis/loggo/dispatcher/workers"
 	"github.com/2gis/loggo/logging"
 )
@@ -15,6 +16,8 @@ import (
 // into output; based on config, starts system journal special follower and pipes its output separately
 type Dispatcher struct {
 	ticker *time.Ticker
+
+	config configuration.Config
 
 	followerPool       FollowerPool
 	ignoredPool        map[string]bool
@@ -44,10 +47,11 @@ func (d *Dispatcher) OutJournald() <-chan string {
 
 // NewDispatcher is a Dispatcher constructor
 func NewDispatcher(
-	followerFabric workers.FollowerFabric, containersProvider ContainersProvider,
-	cursorStorage workers.Storage, startJournald bool, refreshInterval time.Duration, logger logging.Logger) *Dispatcher {
+	config configuration.Config, followerFabric workers.FollowerFabric, containersProvider ContainersProvider,
+	cursorStorage workers.Storage, logger logging.Logger) *Dispatcher {
 	return &Dispatcher{
-		ticker: time.NewTicker(refreshInterval),
+		config: config,
+		ticker: time.NewTicker(time.Duration(config.TargetsRefreshIntervalSec) * time.Second),
 
 		followerPool: NewFollowerPool(),
 		ignoredPool:  make(map[string]bool),
@@ -55,7 +59,7 @@ func NewDispatcher(
 		followerFabric:     followerFabric,
 		containersProvider: containersProvider,
 		cursorStorage:      cursorStorage,
-		startJournald:      startJournald,
+		startJournald:      config.JournaldConfig.LogJournalD,
 
 		wg:     &sync.WaitGroup{},
 		logger: logger,
@@ -194,7 +198,7 @@ func (d *Dispatcher) startFollowers(ctx context.Context, containers containers.C
 }
 
 func (d *Dispatcher) startFollowerJournald(ctx context.Context) {
-	followerJournald, err := d.followerFabric.NewFollowerJournald(d.outputJournald, d.logger)
+	followerJournald, err := d.followerFabric.NewFollowerJournald(d.outputJournald, d.config.ParserConfig, d.logger)
 
 	if err != nil {
 		d.logger.Error(err)

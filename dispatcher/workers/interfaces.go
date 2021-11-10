@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/2gis/loggo/common"
+	"github.com/2gis/loggo/configuration"
 	"github.com/2gis/loggo/logging"
 	"github.com/2gis/loggo/readers"
 )
@@ -30,7 +31,7 @@ type Storage interface {
 
 // JournaldReader is specific journal reader interface
 type JournaldReader interface {
-	EntryRead() (entryMap common.EntryMapString, err error)
+	EntryRead() (entryMap common.EntryMap, err error)
 	GetAcquireFlag() bool
 	GetCursor() string
 	Close() error
@@ -52,7 +53,7 @@ type Follower interface {
 	SetEOFShutdownFlag()
 }
 
-// Follower is a worker-follower interface for dispatcher
+// FollowerJournald is a worker-follower interface for dispatcher
 type FollowerJournald interface {
 	Start(ctx context.Context)
 }
@@ -62,5 +63,5 @@ type FollowerFabric interface {
 	NewFollower(
 		output chan<- *common.Entry, filePath, format string, extends common.EntryMap) (Follower, error)
 	NewFollowerJournald(
-		output chan<- string, logger logging.Logger) (FollowerJournald, error)
+		output chan<- string, config configuration.ParserConfig, logger logging.Logger) (FollowerJournald, error)
 }

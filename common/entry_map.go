@@ -10,6 +10,19 @@ func (entryMap EntryMap) Extend(extends EntryMap) {
 	}
 }
 
+func (entryMap EntryMap) Filter(keys ...string) EntryMap {
+	entrymap := make(EntryMap)
+
+	for _, key := range keys {
+		if value, ok := entryMap[key]; ok {
+			entrymap[key] = value
+		}
+	}
+
+	return entrymap
+}
+
+
 // NamespaceName attempts to return field from EntryMap
 func (entryMap EntryMap) NamespaceName() string {
 	namespace, ok := entryMap[KubernetesNamespaceName].(string)

@@ -37,3 +37,16 @@ func TestEntryMap_ContainerName(t *testing.T) {
 	assert.Equal(t, "container", EntryMap{KubernetesContainerName: "container"}.ContainerName())
 	assert.Equal(t, "", EntryMap{}.ContainerName())
 }
+
+func TestEntryMap_Filter(t *testing.T) {
+	entryMap := EntryMap{
+		"key1": "value1",
+		"key2": "value2",
+		"key3": "value3",
+	}
+	entryMap = entryMap.Filter("key2", "key3", "key_absent")
+	assert.Equal(t, EntryMap{"key2": "value2", "key3": "value3"}, entryMap)
+
+	entryMap = entryMap.Filter("key2")
+	assert.Equal(t, EntryMap{"key2": "value2"}, entryMap)
+}

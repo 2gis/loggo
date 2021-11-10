@@ -43,8 +43,8 @@ func NewReaderJournald(journalPath string, initialCursor string) (*ReaderJournal
 	return reader, nil
 }
 
-// EntryRead gets new entry and marshals it into json string
-func (reader *ReaderJournald) EntryRead() (common.EntryMapString, error) {
+// EntryRead gets new entry
+func (reader *ReaderJournald) EntryRead() (common.EntryMap, error) {
 	// journal is absent due to unknown reason
 	if !reader.GetAcquireFlag() {
 		err := reader.acquireJournal()
@@ -75,9 +75,15 @@ func (reader *ReaderJournald) EntryRead() (common.EntryMapString, error) {
 			return nil, err
 		}
 
-		entryMap := common.EntryMapString(entry.Fields)
+
+		entryMap := make(common.EntryMap, len(entry.Fields))
+
+		for k, v := range entry.Fields {
+			entryMap[k] = v
+		}
+
 		entryMap[common.LabelTime] = fmt.Sprintf("%d", entry.RealtimeTimestamp)
-		return entry.Fields, nil
+		return entryMap, nil
 	}
 
 	// rotation handling

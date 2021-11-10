@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/2gis/loggo/common"
+	"github.com/2gis/loggo/configuration"
 	"github.com/2gis/loggo/logging"
 )
 
@@ -16,7 +17,8 @@ import (
 type workerJournald struct {
 	worker
 
-	extends common.EntryMapString
+	config  configuration.ParserConfig
+	extends common.EntryMap
 
 	reader        JournaldReader
 	cursorStorage Storage
@@ -28,14 +30,16 @@ type workerJournald struct {
 }
 
 // newFollowerJournald constructor
-func newFollowerJournald(output chan<- string, reader JournaldReader, extends common.EntryMapString,
-	cursorStorage Storage, commitIntervalSec int, readTimeout int, logger logging.Logger) *workerJournald {
+func newFollowerJournald(output chan<- string, reader JournaldReader, config configuration.ParserConfig,
+	extends common.EntryMap, cursorStorage Storage,
+	commitIntervalSec, readTimeout int, logger logging.Logger) *workerJournald {
 	return &workerJournald{
 		worker: worker{
 			wg:     &sync.WaitGroup{},
 			logger: logger,
 		},
 
+		config:  config,
 		extends: extends,
 
 		reader:        reader,
@@ -89,6 +93,8 @@ func (worker *workerJournald) startReader(ctx context.Context) {
 }
 
 func (worker *workerJournald) entryProceed() error {
+	resultingEntryMap := common.EntryMap{}
+
 	entryMap, err := worker.reader.EntryRead()
 	if err != nil {
 		return err
@@ -98,10 +104,13 @@ func (worker *workerJournald) entryProceed() error {
 		return ErrNoRecords
 	}
 
-	sourceTimestamp := entryMap[common.LabelTime]
+	sourceTimestamp, ok := entryMap[common.LabelTime].(string)
+	if !ok {
+		return fmt.Errorf("missing entry timestamp")
+	}
+
 	usec, err := strconv.ParseInt(sourceTimestamp, 10, 64)
 
-	// malformed timestamp, so move cursor skipping record, but don't return error
 	if err != nil {
 		return fmt.Errorf("incorrect entry timestamp")
 	}
@@ -116,9 +125,22 @@ func (worker *workerJournald) entryProceed() error {
 		"MESSAGE",
 		common.LabelTime,
 	)
-	timestamp := time.Unix(0, usec*int64(time.Microsecond)).Format(time.RFC3339)
-	entryMap.Extend(common.EntryMapString{common.LabelTime: timestamp})
-	entryMap.Extend(worker.extends)
+
+	resultingEntryMap[common.LabelTime] = time.Unix(0, usec*int64(time.Microsecond)).Format(time.RFC3339)
+
+	if worker.config.UserLogFieldsKey != "" {
+		resultingEntryMap[worker.config.UserLogFieldsKey] = entryMap
+	} else {
+		resultingEntryMap = entryMap
+	}
+
+	if worker.config.ExtendsFieldsKey != "" {
+		resultingEntryMap[worker.config.ExtendsFieldsKey] = worker.extends
+	} else {
+		resultingEntryMap.Extend(worker.extends)
+	}
+
+
 	entryByteString, err := json.Marshal(entryMap)
 
 	if err != nil {
