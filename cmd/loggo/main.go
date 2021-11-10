@@ -157,11 +157,10 @@ func main() {
 		logger,
 	)
 	workersDispatcher := dispatcher.NewDispatcher(
+		config,
 		followerFabric,
 		providerContainers,
 		cursorStorage,
-		config.JournaldConfig.LogJournalD,
-		time.Duration(config.TargetsRefreshIntervalSec)*time.Second,
 		logger,
 	)
 	transportInputs = append(transportInputs, workersDispatcher.OutJournald())

@@ -11,12 +11,12 @@ var ErrorClosed = errors.New("not acquired")
 
 // ReaderJournaldMock mocks specific sdjournal based reader with EntryMap reader interface
 type ReaderJournaldMock struct {
-	Entries       []common.EntryMapString
+	Entries       []common.EntryMap
 	cursor        int
 	finalizedFlag bool
 }
 
-func NewReaderJournaldMock(entries ...common.EntryMapString) *ReaderJournaldMock {
+func NewReaderJournaldMock(entries ...common.EntryMap) *ReaderJournaldMock {
 	return &ReaderJournaldMock{
 		Entries: entries,
 	}
@@ -39,7 +39,7 @@ func (reader *ReaderJournaldMock) Close() error {
 	return nil
 }
 
-func (reader *ReaderJournaldMock) EntryRead() (common.EntryMapString, error) {
+func (reader *ReaderJournaldMock) EntryRead() (common.EntryMap, error) {
 	if reader.finalizedFlag {
 		return nil, ErrorClosed
 	}

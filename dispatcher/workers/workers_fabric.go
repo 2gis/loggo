@@ -64,7 +64,8 @@ func (f *FollowersFabric) NewFollower(output chan<- *common.Entry, filePath, for
 }
 
 // NewFollowerJournald constructor
-func (f *FollowersFabric) NewFollowerJournald(output chan<- string, logger logging.Logger) (FollowerJournald, error) {
+func (f *FollowersFabric) NewFollowerJournald(output chan<- string, config configuration.ParserConfig,
+	logger logging.Logger) (FollowerJournald, error) {
 	journaldPath, err := readers.JournaldPath(
 		f.config.JournaldConfig.MachineIDPath,
 		f.config.JournaldConfig.JournaldPath,
@@ -85,7 +86,8 @@ func (f *FollowersFabric) NewFollowerJournald(output chan<- string, logger loggi
 	return newFollowerJournald(
 		output,
 		readerJournald,
-		common.EntryMapString{
+		config,
+		common.EntryMap{
 			common.LabelDataCenter:         f.config.K8SExtends.DataCenter,
 			common.LabelPurpose:            f.config.K8SExtends.Purpose,
 			common.LabelLogstashPrefix:     f.config.K8SExtends.LogstashPrefix,
