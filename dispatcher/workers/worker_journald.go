@@ -93,7 +93,7 @@ func (worker *workerJournald) startReader(ctx context.Context) {
 }
 
 func (worker *workerJournald) entryProceed() error {
-	resultingEntryMap := common.EntryMap{}
+	result := common.EntryMap{}
 
 	entryMap, err := worker.reader.EntryRead()
 	if err != nil {
@@ -126,25 +126,23 @@ func (worker *workerJournald) entryProceed() error {
 		common.LabelTime,
 	)
 
-	resultingEntryMap[common.LabelTime] = time.Unix(0, usec*int64(time.Microsecond)).Format(time.RFC3339)
-
 	if worker.config.UserLogFieldsKey != "" {
-		resultingEntryMap[worker.config.UserLogFieldsKey] = entryMap
+		result[worker.config.UserLogFieldsKey] = entryMap
 	} else {
-		resultingEntryMap = entryMap
+		result = entryMap
 	}
 
 	if worker.config.ExtendsFieldsKey != "" {
-		resultingEntryMap[worker.config.ExtendsFieldsKey] = worker.extends
+		result[worker.config.ExtendsFieldsKey] = worker.extends
 	} else {
-		resultingEntryMap.Extend(worker.extends)
+		result.Extend(worker.extends)
 	}
 
-
-	entryByteString, err := json.Marshal(entryMap)
+	result[common.LabelTime] = time.Unix(0, usec*int64(time.Microsecond)).Format(time.RFC3339)
+	entryByteString, err := json.Marshal(result)
 
 	if err != nil {
-		return fmt.Errorf("journald: error marshalling entry %v", entryMap)
+		return fmt.Errorf("journald: error marshalling entry %v", result)
 	}
 
 	worker.output <- string(entryByteString)
