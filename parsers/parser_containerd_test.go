@@ -51,6 +51,22 @@ var testCasesParserContainerD = []testCaseParserContainerD{
 			"time":   "2020-09-10T07:00:03.585507743Z",
 		},
 	},
+	{
+		name:   "Positive scenario, log field plain string",
+		config: configFlattenSubDict(),
+		input:  "2020-09-10T07:00:03.585507743Z stdout F {\"hello\":\"world\",\"a\": 1,\"b\": null}",
+		entryMapExpected: common.EntryMap{
+			"log": common.EntryMap{
+				"hello": "world",
+				"a":     float64(1),
+				"b":     nil,
+			},
+			"cri": common.EntryMap{
+				"stream": "stdout",
+				"time":   "2020-09-10T07:00:03.585507743Z",
+			},
+		},
+	},
 }
 
 func TestParseContainerDFormat(t *testing.T) {

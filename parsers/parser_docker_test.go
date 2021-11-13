@@ -124,8 +124,8 @@ var (
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
 			entryMapExpected: common.EntryMap{
-				"user_log": map[string]interface{}{"time": map[string]interface{}{"value": 1.142}},
-				"docker":   map[string]interface{}{"time": "2018-01-09T05:08:03.100481875Z"},
+				"user_log": common.EntryMap{"time": map[string]interface{}{"value": 1.142}},
+				"docker":   common.EntryMap{"time": "2018-01-09T05:08:03.100481875Z"},
 			},
 		},
 		{
@@ -137,8 +137,8 @@ var (
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
 			entryMapExpected: common.EntryMap{
-				"user_log": map[string]interface{}{"time.value": 1.142},
-				"docker":   map[string]interface{}{"time": "2018-01-09T05:08:03.100481875Z"},
+				"user_log": common.EntryMap{"time.value": 1.142},
+				"docker":   common.EntryMap{"time": "2018-01-09T05:08:03.100481875Z"},
 			},
 		},
 		{
@@ -151,7 +151,7 @@ var (
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
 			entryMapExpected: common.EntryMap{
 				"time.value": 1.142,
-				"docker":     map[string]interface{}{"time": "2018-01-09T05:08:03.100481875Z"},
+				"docker":     common.EntryMap{"time": "2018-01-09T05:08:03.100481875Z"},
 			},
 		},
 		{
@@ -163,8 +163,8 @@ var (
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
 			entryMapExpected: common.EntryMap{
-				"log":    map[string]interface{}{"time": map[string]interface{}{"value": 1.142}},
-				"docker": map[string]interface{}{"time": "2018-01-09T05:08:03.100481875Z"},
+				"log":    common.EntryMap{"time": map[string]interface{}{"value": 1.142}},
+				"docker": common.EntryMap{"time": "2018-01-09T05:08:03.100481875Z"},
 			},
 		},
 		{
@@ -180,6 +180,18 @@ var (
 				"time": 1.142,
 				"test": "value",
 			},
+		},
+	}
+
+	testCasesParserDockerUnpackingControl = []testCaseParserDocker{
+		{
+			name:             "Different keys to unpack",
+			input:            `{"log": "{\"hello\":\"world\",\"a\": 1,\"b\": null}", "a": "else"}`,
+			entryMapExpected: common.EntryMap{
+				"log": common.EntryMap{"hello": "world", "a": float64(1), "b": nil},
+				"cri": common.EntryMap{"a": "else"},
+			},
+			config: configFlattenSubDict(),
 		},
 	}
 )
@@ -238,10 +250,36 @@ func TestSeparateDockerUserLogFieldsSet(t *testing.T) {
 	}
 }
 
+func TestParserDockerUnpackingControl(t *testing.T) {
+	for _, testCase := range testCasesParserDockerUnpackingControl {
+		t.Run(testCase.name, func(t *testing.T) {
+			parser := CreateParserDockerFormat(testCase.config)
+
+			out, err := parser([]byte(testCase.input))
+			assert.Equal(t, testCase.entryMapExpected, out)
+
+			if testCase.errExpected != nil {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func configFlattenTopLevel() configuration.ParserConfig {
 	return configuration.ParserConfig{
 		UserLogFieldsKey: "",
 		CRIFieldsKey:     "",
+		FlattenUserLog:   true,
+	}
+}
+
+func configFlattenSubDict() configuration.ParserConfig {
+	return configuration.ParserConfig{
+		UserLogFieldsKey: LogKeyLog,
+		CRIFieldsKey:     "cri",
 		FlattenUserLog:   true,
 	}
 }

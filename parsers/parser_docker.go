@@ -55,7 +55,7 @@ func setDockerFields(entryMap common.EntryMap, targetField string) {
 		return
 	}
 
-	dockerFields := make(map[string]interface{})
+	dockerFields := make(common.EntryMap)
 
 	for k, v := range entryMap {
 		dockerFields[k] = v
@@ -86,11 +86,11 @@ func setLogFieldContent(entryMap common.EntryMap, targetField, JSONContent strin
 	if !flatten {
 		// flatten flag is not set and the target field is empty, we still need some field to set content to.
 		if targetField == "" {
-			entryMap[LogKeyLog] = innerMap
+			entryMap[LogKeyLog] = common.EntryMap(innerMap)
 			return nil
 		}
 
-		entryMap[targetField] = innerMap
+		entryMap[targetField] = common.EntryMap(innerMap)
 		return nil
 	}
 
@@ -99,7 +99,7 @@ func setLogFieldContent(entryMap common.EntryMap, targetField, JSONContent strin
 		return common.Flatten(entryMap, innerMap)
 	}
 
-	innerMapUnpacked := make(map[string]interface{})
+	innerMapUnpacked := make(common.EntryMap)
 
 	if err := common.Flatten(innerMapUnpacked, innerMap); err != nil {
 		return err
