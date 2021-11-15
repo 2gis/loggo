@@ -48,7 +48,7 @@ func (s *StageFiltering) proceed() {
 			}
 		}
 
-		if v, ok := message[s.userLogField].(map[string]interface{}); ok {
+		if v, ok := message[s.userLogField].(common.EntryMap); ok {
 			if !filterOutSerivceFields(v) {
 				continue
 			}
@@ -58,7 +58,7 @@ func (s *StageFiltering) proceed() {
 	}
 }
 
-func filterOutSerivceFields(message map[string]interface{}) bool {
+func filterOutSerivceFields(message common.EntryMap) bool {
 	loggingFlag := true
 
 	if flag, ok := message[parsers.LogKeyLogging].(bool); ok {

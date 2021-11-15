@@ -44,15 +44,18 @@ func NewStageParsingSLI(input <-chan common.EntryMap, userLogField string, parse
 
 func (s *StageParsingSLI) proceed() {
 	for message := range s.input {
-		if s.userLogField == "" {
-			s.parser.Parse(message)
-			s.output <- message
-			continue
-		}
+		s.parseSLIFromEntryMap(message)
+		s.output <- message
+	}
+}
 
-		if v, ok := message[s.userLogField].(map[string]interface{}); ok {
-			s.parser.Parse(v)
-			s.output <- message
-		}
+func (s *StageParsingSLI) parseSLIFromEntryMap(entryMap common.EntryMap) {
+	if s.userLogField == "" {
+		s.parser.Parse(entryMap)
+		return
+	}
+
+	if v, ok := entryMap[s.userLogField].(common.EntryMap); ok {
+		s.parser.Parse(v)
 	}
 }
