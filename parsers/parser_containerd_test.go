@@ -46,7 +46,7 @@ var testCasesParserContainerD = []testCaseParserContainerD{
 		config: configFlattenTopLevel(),
 		input:  "2020-09-10T07:00:03.585507743Z stdout F my message",
 		entryMapExpected: common.EntryMap{
-			"log":    "my message",
+			"msg":    "my message",
 			"stream": "stdout",
 			"time":   "2020-09-10T07:00:03.585507743Z",
 		},

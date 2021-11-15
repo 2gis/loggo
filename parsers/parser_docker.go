@@ -38,7 +38,7 @@ func CreateParserDockerFormat(config configuration.ParserConfig) func(line []byt
 		setDockerFields(outer, config.CRIFieldsKey)
 
 		if err := setLogFieldContent(
-			outer, config.UserLogFieldsKey, logFieldContentString, config.FlattenUserLog); err != nil {
+			outer, config.UserLogFieldsKey, config.RawLogFieldKey, logFieldContentString, config.FlattenUserLog); err != nil {
 			return nil, fmt.Errorf("error setting user log field: %w", err)
 		}
 
@@ -65,46 +65,33 @@ func setDockerFields(entryMap common.EntryMap, targetField string) {
 	entryMap[targetField] = dockerFields
 }
 
-func setLogFieldContent(entryMap common.EntryMap, targetField, JSONContent string, flatten bool) error {
+func setLogFieldContent(entryMap common.EntryMap, userLogField, rawField, logFieldContent string, flatten bool) error {
 	var inner interface{}
 
-	err := json.Unmarshal([]byte(JSONContent), &inner)
+	baseMap := selectBaseMap(entryMap, userLogField)
+	err := json.Unmarshal([]byte(logFieldContent), &inner)
 	innerMap, ok := inner.(map[string]interface{})
-
 	if err != nil || !ok {
-		if targetField == "" {
-			entryMap[LogKeyLog] = JSONContent
-			return nil
-		}
-
-		entryMap[targetField] = JSONContent
+		baseMap[rawField] = logFieldContent
 		return nil
 	}
 
 	processNginxFields(innerMap)
 
 	if !flatten {
-		// flatten flag is not set and the target field is empty, we still need some field to set content to.
-		if targetField == "" {
-			entryMap[LogKeyLog] = common.EntryMap(innerMap)
-			return nil
-		}
-
-		entryMap[targetField] = common.EntryMap(innerMap)
+		baseMap.Extend(innerMap)
 		return nil
 	}
 
-	// unpack to top level dict, backward compatibility
-	if targetField == "" {
-		return common.Flatten(entryMap, innerMap)
+	return common.Flatten(baseMap, innerMap)
+}
+
+func selectBaseMap(baseMap common.EntryMap, userLogField string) common.EntryMap {
+	if userLogField == "" {
+		return baseMap
 	}
 
-	innerMapUnpacked := make(common.EntryMap)
-
-	if err := common.Flatten(innerMapUnpacked, innerMap); err != nil {
-		return err
-	}
-
-	entryMap[targetField] = innerMapUnpacked
-	return nil
+	subMap := make(common.EntryMap)
+	baseMap[userLogField] = subMap
+	return subMap
 }

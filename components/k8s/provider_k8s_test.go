@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,7 +27,6 @@ func TestRetrieveServices(t *testing.T) {
 	provider.Retrieve()
 
 	assert.Len(t, provider.services, 3)
-	fmt.Print(provider.services)
 	assert.Equal(t, "test", provider.services["test.2gis.ru"].Name)
 	assert.Equal(t, "test.2gis.ru", provider.services["test.2gis.ru"].Domains[0])
 	assert.Len(t, provider.services["test.2gis.ru"].Domains, 2)

@@ -26,7 +26,8 @@ func CreateParserContainerDFormat(config configuration.ParserConfig) func(line [
 
 		setContainerDFields(outer, config.CRIFieldsKey, output[1], output[2])
 
-		if err := setLogFieldContent(outer, config.UserLogFieldsKey, output[3], config.FlattenUserLog); err != nil {
+		if err := setLogFieldContent(
+			outer, config.UserLogFieldsKey, config.RawLogFieldKey, output[3], config.FlattenUserLog); err != nil {
 			return nil, fmt.Errorf("error setting user log field: %w", err)
 		}
 

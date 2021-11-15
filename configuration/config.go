@@ -42,6 +42,7 @@ type ParserConfig struct {
 	UserLogFieldsKey string
 	CRIFieldsKey     string
 	ExtendsFieldsKey string
+	RawLogFieldKey   string
 
 	FlattenUserLog bool
 }
@@ -308,6 +309,10 @@ func GetConfig() Config {
 		Default("").
 		Envar("EXTENDS_FIELDS_KEY").
 		StringVar(&config.ParserConfig.ExtendsFieldsKey)
+	kingpin.Flag("raw-log-field-key", "Entry field inside user log fields map. Used for non-json messages.").
+		Default("msg").
+		Envar("RAW_LOG_FIELD_KEY").
+		StringVar(&config.ParserConfig.RawLogFieldKey)
 
 	kingpin.Flag("flatten-user-log", "Whether to flatten user log or not.").
 		Default("true").
