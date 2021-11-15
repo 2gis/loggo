@@ -23,7 +23,7 @@ var (
 		{
 			name:             "Positive, flattening to top-level",
 			input:            "{\"log\":\"hello world\", \"key1\":1}",
-			entryMapExpected: common.EntryMap{"log": "hello world", "key1": float64(1)},
+			entryMapExpected: common.EntryMap{"msg": "hello world", "key1": float64(1)},
 		},
 		{
 			name:             "log field is missing",
@@ -121,6 +121,7 @@ var (
 				UserLogFieldsKey: "user_log",
 				CRIFieldsKey:     "docker",
 				FlattenUserLog:   false,
+				RawLogFieldKey:   "msg",
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
 			entryMapExpected: common.EntryMap{
@@ -155,15 +156,16 @@ var (
 			},
 		},
 		{
-			name: "flattening is off, user log field is empty, user log expected in log field of top level dict",
+			name: "flattening is off, user log field is empty, user log expected in the level dict",
 			config: configuration.ParserConfig{
 				UserLogFieldsKey: "",
 				CRIFieldsKey:     "docker",
 				FlattenUserLog:   false,
+				RawLogFieldKey:   "msg",
 			},
 			input: `{"time": "2018-01-09T05:08:03.100481875Z", "log": "{\"time\":{\"value\": 1.142}}"}`,
 			entryMapExpected: common.EntryMap{
-				"log":    common.EntryMap{"time": map[string]interface{}{"value": 1.142}},
+				"time": map[string]interface{}{"value": 1.142},
 				"docker": common.EntryMap{"time": "2018-01-09T05:08:03.100481875Z"},
 			},
 		},
@@ -185,8 +187,8 @@ var (
 
 	testCasesParserDockerUnpackingControl = []testCaseParserDocker{
 		{
-			name:             "Different keys to unpack",
-			input:            `{"log": "{\"hello\":\"world\",\"a\": 1,\"b\": null}", "a": "else"}`,
+			name:  "Different keys to unpack",
+			input: `{"log": "{\"hello\":\"world\",\"a\": 1,\"b\": null}", "a": "else"}`,
 			entryMapExpected: common.EntryMap{
 				"log": common.EntryMap{"hello": "world", "a": float64(1), "b": nil},
 				"cri": common.EntryMap{"a": "else"},
@@ -273,6 +275,7 @@ func configFlattenTopLevel() configuration.ParserConfig {
 		UserLogFieldsKey: "",
 		CRIFieldsKey:     "",
 		FlattenUserLog:   true,
+		RawLogFieldKey:   "msg",
 	}
 }
 
@@ -281,5 +284,6 @@ func configFlattenSubDict() configuration.ParserConfig {
 		UserLogFieldsKey: LogKeyLog,
 		CRIFieldsKey:     "cri",
 		FlattenUserLog:   true,
+		RawLogFieldKey:   "msg",
 	}
 }
