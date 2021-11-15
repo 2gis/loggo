@@ -53,10 +53,10 @@ func TestStageFiltering(t *testing.T) {
 func TestStageFilteringNestedField(t *testing.T) {
 	inputMessages := []common.EntryMap{
 		{"log": "test"},
-		{"log": map[string]interface{}{
+		{"log": common.EntryMap{
 			parsers.LogKeyLogging: true, parsers.LogKeySLA: false,
 		}},
-		{"log": map[string]interface{}{
+		{"log": common.EntryMap{
 			parsers.LogKeyLogging: false, parsers.LogKeySLA: true,
 		}},
 	}
