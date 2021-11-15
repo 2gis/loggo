@@ -41,8 +41,8 @@ func setContainerDFields(entryMap common.EntryMap, targetField, time, stream str
 		return
 	}
 
-	fields := make(map[string]interface{})
-	fields[LogKeyTime] = time
-	fields[LogKeyStream] = stream
-	entryMap[targetField] = fields
+	entryMap[targetField] = common.EntryMap{
+		LogKeyTime:   time,
+		LogKeyStream: stream,
+	}
 }

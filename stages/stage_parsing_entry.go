@@ -77,12 +77,22 @@ func (s *StageParsingEntry) proceed() {
 			entryMap = s.parseDefault(message.Origin)
 		}
 
-		if s.extendsField != "" {
-			entryMap[s.extendsField] = message.Extends
-		} else {
-			entryMap.Extend(message.Extends)
-		}
-
+		setExtends(entryMap, message.Extends, s.extendsField)
 		s.output <- entryMap
 	}
+}
+
+func setExtends(entryMap, extends common.EntryMap, extendsField string) {
+	if extendsField == "" {
+		entryMap.Extend(extends)
+		return
+	}
+
+	v, ok := entryMap[extendsField].(common.EntryMap)
+	if !ok {
+		entryMap[extendsField] = extends
+		return
+	}
+
+	v.Extend(extends)
 }
