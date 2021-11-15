@@ -94,7 +94,6 @@ func (worker *workerJournald) startReader(ctx context.Context) {
 
 func (worker *workerJournald) entryProceed() error {
 	result := common.EntryMap{}
-
 	entryMap, err := worker.reader.EntryRead()
 	if err != nil {
 		return err
@@ -116,6 +115,7 @@ func (worker *workerJournald) entryProceed() error {
 	}
 
 	entryMap["SYSTEMD_UNIT"] = entryMap["_SYSTEMD_UNIT"]
+	entryMap[common.LabelTime] = time.Unix(0, usec*int64(time.Microsecond)).Format(time.RFC3339)
 	entryMap = entryMap.Filter(
 		"SYSLOG_IDENTIFIER",
 		"PRIORITY",
@@ -138,7 +138,6 @@ func (worker *workerJournald) entryProceed() error {
 		result.Extend(worker.extends)
 	}
 
-	result[common.LabelTime] = time.Unix(0, usec*int64(time.Microsecond)).Format(time.RFC3339)
 	entryByteString, err := json.Marshal(result)
 
 	if err != nil {
