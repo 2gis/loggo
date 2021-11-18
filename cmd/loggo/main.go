@@ -175,7 +175,7 @@ func main() {
 		workersDispatcher.Out(),
 		parsers.CreateParserDockerFormat(config.ParserConfig),
 		parsers.CreateParserContainerDFormat(config.ParserConfig),
-		parsers.ParseStringPlain,
+		parsers.CreateParserPlain(config.ParserConfig),
 		config.ParserConfig.ExtendsFieldsKey,
 		logger,
 	)
