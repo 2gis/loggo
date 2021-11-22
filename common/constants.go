@@ -6,7 +6,6 @@ const (
 	LabelPurpose           = "purpose"
 	LabelContainerID       = "docker.container_id"
 	LabelLogstashPrefix    = "logstash_prefix"
-	LabelLogstashNamespace = "namespace"
 	LabelLogType           = "type"
 	LabelTime              = "time"
 )

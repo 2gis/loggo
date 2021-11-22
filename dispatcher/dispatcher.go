@@ -220,7 +220,6 @@ func (d *Dispatcher) finalize() {
 func (d *Dispatcher) containerExtends(c *containers.Container) (extends common.EntryMap) {
 	extends = make(common.EntryMap)
 	extends[common.LabelContainerID] = c.ID
-	extends[common.LabelLogstashNamespace] = c.GetPodNamespace()
 	extends[common.KubernetesPodName] = c.GetPodName()
 	extends[common.KubernetesNamespaceName] = c.GetPodNamespace()
 	extends[common.KubernetesContainerName] = c.GetName()

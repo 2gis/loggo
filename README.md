@@ -228,7 +228,6 @@ It would be successfuly parsed and the resulting JSON string (linted for readme)
    "kubernetes.node_hostname":"localhost",
    "kubernetes.pod_name":"pod",
    "logstash_prefix":"k8s-unknown",
-   "namespace":"namespace",
    "purpose":"staging",
    "remote_addr":"10.154.18.198",
    "remote_user":"",
@@ -313,7 +312,6 @@ Environment variables are taken at random. Resulting output entry map would look
 		"kubernetes.node_hostname": "localhost",
 		"kubernetes.pod_name": "deis-router-77745f5559-f424j",
 		"logstash_prefix": "k8s-unknown",
-		"namespace": "deis",
 		"purpose": "staging",
 		"type": "containers"
 	},
