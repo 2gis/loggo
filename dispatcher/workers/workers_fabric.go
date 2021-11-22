@@ -92,7 +92,6 @@ func (f *FollowersFabric) NewFollowerJournald(output chan<- string, config confi
 			common.LabelPurpose:            f.config.K8SExtends.Purpose,
 			common.LabelLogstashPrefix:     f.config.K8SExtends.LogstashPrefix,
 			common.KubernetesNodeHostname:  f.config.K8SExtends.NodeHostname,
-			common.LabelLogstashNamespace:  common.NamespaceJournald,
 			common.KubernetesNamespaceName: common.NamespaceJournald,
 		},
 		f.storage,
