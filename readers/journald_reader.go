@@ -20,26 +20,25 @@ type ReaderJournald struct {
 
 // NewReaderJournald is a constructor for ReaderJournald instance
 func NewReaderJournald(journalPath string, initialCursor string) (*ReaderJournald, error) {
+	watcher, err := fsnotify.NewWatcher()
+
+	if err != nil {
+		return nil, fmt.Errorf("unable to init watching for file '%s', %s", journalPath, err)
+	}
+
 	reader := &ReaderJournald{
 		journalPath: journalPath,
 		journal:     nil,
 		cursor:      initialCursor,
+		watcher:     watcher,
 	}
-	err := reader.acquireJournal()
+
+	err = reader.acquireJournal()
 
 	if err != nil {
 		return nil, err
 	}
 
-	reader.watcher, err = fsnotify.NewWatcher()
-
-	if err != nil {
-		return nil, fmt.Errorf("unable to init watching for file '%s', %s", reader.journalPath, err)
-	}
-
-	if err := reader.watcher.Add(reader.journalPath); err != nil {
-		return nil, fmt.Errorf("unable to init watching for file '%s', %s", reader.journalPath, err)
-	}
 	return reader, nil
 }
 
@@ -75,7 +74,6 @@ func (reader *ReaderJournald) EntryRead() (common.EntryMap, error) {
 			return nil, err
 		}
 
-
 		entryMap := make(common.EntryMap, len(entry.Fields))
 
 		for k, v := range entry.Fields {
@@ -94,6 +92,7 @@ func (reader *ReaderJournald) EntryRead() (common.EntryMap, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			// successfully rotated, but return empty result in that iteration
 			return nil, nil
 		}
@@ -129,6 +128,12 @@ func (reader *ReaderJournald) acquireJournal() error {
 		}
 
 		reader.cursor, _ = reader.journal.GetCursor()
+	}
+
+	_ = reader.watcher.Remove(reader.journalPath)
+
+	if err := reader.watcher.Add(reader.journalPath); err != nil {
+		return fmt.Errorf("unable to init watching for file '%s', %w", reader.journalPath, err)
 	}
 
 	return nil
