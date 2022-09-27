@@ -46,7 +46,7 @@ func (p *ProviderK8SServices) Retrieve() error {
 	}
 
 	for _, namespace := range namespaces.Items {
-		services, err := p.clientSet.CoreV1().Services(namespace.GetName()).List(context.TODO(),metav1.ListOptions{})
+		services, err := p.clientSet.CoreV1().Services(namespace.GetName()).List(context.TODO(), metav1.ListOptions{})
 
 		if err != nil {
 			p.logger.Debugf("Unable to list service in namespace '%s': %s",
