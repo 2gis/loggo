@@ -1,7 +1,9 @@
 version: '2'
 services:
   loggo:
-    build: .
+    build:
+      context: .
+      dockerfile: build/loggo/Dockerfile
   redis:
     image: redis:6.2.5
     ports:

@@ -30,7 +30,11 @@ cleanup-docker:
 
 build:
 	mkdir -p build
-	GO111MODULE=on CGO_ENABLED=1 GOOS=linux go build -mod vendor -tags netgo -installsuffix cgo -o build/loggo cmd/loggo/main.go
+	GO111MODULE=on CGO_ENABLED=1 GOOS=linux go build -mod vendor -tags netgo -installsuffix cgo -o build/loggo/loggo cmd/loggo/main.go
+
+build-validating-webhook:
+	mkdir -p build
+	GO111MODULE=on CGO_ENABLED=1 GOOS=linux go build -mod vendor -tags netgo -installsuffix cgo -o build/validating-webhook/validating-webhook cmd/validating-webhook/main.go
 
 build-test:
 	GO111MODULE=on go build -mod vendor -o build/tests cmd/tests/main.go
