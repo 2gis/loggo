@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +26,10 @@ import (
 
 type FakeBatchV1 struct {
 	*testing.Fake
+}
+
+func (c *FakeBatchV1) CronJobs(namespace string) v1.CronJobInterface {
+	return &FakeCronJobs{c, namespace}
 }
 
 func (c *FakeBatchV1) Jobs(namespace string) v1.JobInterface {

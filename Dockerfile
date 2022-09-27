@@ -1,4 +1,4 @@
-FROM golang:1.16.8-bullseye as builder
+FROM golang:1.18.6-bullseye as builder
 RUN apt update && apt install -y libsystemd-dev
 WORKDIR /src
 COPY . /src/

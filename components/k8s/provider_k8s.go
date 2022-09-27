@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -37,7 +38,7 @@ func (p *ProviderK8SServices) Retrieve() error {
 	defer p.Unlock()
 
 	p.services = make(map[string]*Service)
-	namespaces, err := p.clientSet.CoreV1().Namespaces().List(metav1.ListOptions{})
+	namespaces, err := p.clientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
 		p.logger.Debugf("Error: Unable to list namespaces: %s", err.Error())
@@ -45,7 +46,7 @@ func (p *ProviderK8SServices) Retrieve() error {
 	}
 
 	for _, namespace := range namespaces.Items {
-		services, err := p.clientSet.CoreV1().Services(namespace.GetName()).List(metav1.ListOptions{})
+		services, err := p.clientSet.CoreV1().Services(namespace.GetName()).List(context.TODO(),metav1.ListOptions{})
 
 		if err != nil {
 			p.logger.Debugf("Unable to list service in namespace '%s': %s",
