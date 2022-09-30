@@ -55,6 +55,11 @@ func (stream *Stream) Buffer() []byte {
 	return stream.buf
 }
 
+// SetBuffer allows to append to the internal buffer directly
+func (stream *Stream) SetBuffer(buf []byte) {
+	stream.buf = buf
+}
+
 // Write writes the contents of p into the buffer.
 // It returns the number of bytes written.
 // If nn < len(p), it also returns an error explaining
@@ -98,14 +103,14 @@ func (stream *Stream) Flush() error {
 	if stream.Error != nil {
 		return stream.Error
 	}
-	n, err := stream.out.Write(stream.buf)
+	_, err := stream.out.Write(stream.buf)
 	if err != nil {
 		if stream.Error == nil {
 			stream.Error = err
 		}
 		return err
 	}
-	stream.buf = stream.buf[n:]
+	stream.buf = stream.buf[:0]
 	return nil
 }
 
@@ -172,7 +177,6 @@ func (stream *Stream) WriteEmptyObject() {
 func (stream *Stream) WriteMore() {
 	stream.writeByte(',')
 	stream.writeIndention(0)
-	stream.Flush()
 }
 
 // WriteArrayStart write [ with possible indention
