@@ -10,4 +10,4 @@ before_install:
   - sudo apt-get update
   - sudo apt-get -y install libsystemd-dev
 
-script: make build build-test test functional-test-redis functional-test-sla
+script: make build build-validating-webhook build-test test functional-test-redis functional-test-sla

@@ -8,7 +8,7 @@ docker-compose up -d rabbit
 ./build/tests --create-rabbit-queues
 
 ### spin loggo
-timeout --preserve-status 5 ./build/loggo --no-log-journald  --no-sla-exporter \
+timeout --preserve-status 5 ./build/loggo/loggo --no-log-journald  --no-sla-exporter \
 --flush-interval-sec=1 --buffer-max-size=2 \
 --position-file-path="loggo-logs.pos" --logs-path="tests/fixtures/pods" && echo "ok" || echo "bad"
 

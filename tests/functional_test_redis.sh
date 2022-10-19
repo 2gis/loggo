@@ -5,7 +5,7 @@ rm -f loggo-logs.pos loggo-containers-ignore
 docker-compose up -d redis
 
 ### spin loggo
-timeout --preserve-status 5 ./build/loggo --no-log-journald --no-sla-exporter \
+timeout --preserve-status 5 ./build/loggo/loggo --no-log-journald --no-sla-exporter \
   --flush-interval-sec=1 --buffer-max-size=25 \
   --transport="redis" \
   --logs-path="tests/fixtures/pods" --position-file-path="loggo-logs.pos" \
@@ -20,7 +20,7 @@ sleep 5
 }
 
 ### spin loggo
-timeout --preserve-status 5 ./build/loggo --no-log-journald --no-sla-exporter \
+timeout --preserve-status 5 ./build/loggo/loggo --no-log-journald --no-sla-exporter \
   --flush-interval-sec=1 --buffer-max-size=25 \
   --transport="redis" \
   --logs-path="tests/fixtures/pods_containerd" --position-file-path="loggo-logs.pos" \

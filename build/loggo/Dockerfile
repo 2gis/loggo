@@ -6,5 +6,5 @@ RUN make build
 
 FROM debian:bullseye
 RUN apt update && apt install -y ca-certificates
-COPY --from=builder /src/build/loggo /loggo
+COPY --from=builder /src/build/loggo/loggo /loggo
 CMD ["/loggo"]
