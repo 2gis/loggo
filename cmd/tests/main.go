@@ -306,27 +306,27 @@ func getLogExpectations() []*nginxLog {
 func getMetricsExpectations() []*MetricMatch {
 	return []*MetricMatch{
 		{
-			metric: `http_request_count{method="POST",path="all",protocol="HTTP/1.1",service="B",status="200",upstream_pod_name=""}`,
+			metric: `http_request_count{method="POST",path="all",service="B",status="200",upstream_pod_name=""}`,
 			value:  1.0,
 		},
 		{
-			metric: `http_request_time_sum{method="POST",path="all",protocol="HTTP/1.1",service="B",upstream_pod_name=""}`,
+			metric: `http_request_time_sum{method="POST",path="all",service="B",upstream_pod_name=""}`,
 			value:  0.01,
 		},
 		{
-			metric: `http_request_count{method="POST",path="all",protocol="HTTP/1.1",service="A",status="404",upstream_pod_name=""}`,
+			metric: `http_request_count{method="POST",path="all",service="A",status="404",upstream_pod_name=""}`,
 			value:  1.0,
 		},
 		{
-			metric: `http_request_time_sum{method="POST",path="all",protocol="HTTP/1.1",service="A",upstream_pod_name=""}`,
+			metric: `http_request_time_sum{method="POST",path="all",service="A",upstream_pod_name=""}`,
 			value:  0.005,
 		},
 		{
-			metric: `http_upstream_response_time_total_sum{method="POST",path="all",protocol="HTTP/1.1",service="B",upstream_pod_name=""}`,
+			metric: `http_upstream_response_time_total_sum{method="POST",path="all",service="B",upstream_pod_name=""}`,
 			value:  0.098,
 		},
 		{
-			metric: `http_upstream_response_time_total_count{method="POST",path="all",protocol="HTTP/1.1",service="A",upstream_pod_name=""}`,
+			metric: `http_upstream_response_time_total_count{method="POST",path="all",service="A",upstream_pod_name=""}`,
 			value:  1.0,
 		},
 	}

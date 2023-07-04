@@ -48,7 +48,7 @@ func NewCollector(bucketsString string) (*Collector, error) {
 	httpRequestCount := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "http_request_count",
 		Help: "Count requests",
-	}, []string{"method", "service", "path", "status", "protocol", "upstream_pod_name"})
+	}, []string{"method", "service", "path", "status", "upstream_pod_name"})
 
 	httpRequestTotalCount := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "http_request_total_count",
@@ -58,12 +58,12 @@ func NewCollector(bucketsString string) (*Collector, error) {
 		Name:    "http_request_time",
 		Help:    "Histogram for HTTP requests time",
 		Buckets: buckets,
-	}, []string{"method", "service", "path", "protocol", "upstream_pod_name"})
+	}, []string{"method", "service", "path", "upstream_pod_name"})
 	httpUpstreamResponseTimeTotal := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "http_upstream_response_time_total",
 		Help:    "Histogram for HTTP upstream response time, all the upstreams",
 		Buckets: buckets,
-	}, []string{"method", "service", "path", "protocol", "upstream_pod_name"})
+	}, []string{"method", "service", "path", "upstream_pod_name"})
 	logMessageCount := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "log_message_count",
 		Help: "Store all processed log messages per one container",
@@ -115,7 +115,7 @@ func (collector *Collector) Retrieve() error {
 }
 
 // IncrementHTTPRequestCount i.golovchenko: don't like this interface actually, probably needs refactoring
-func (collector *Collector) IncrementHTTPRequestCount(podName, method, service, path, protocol string, status int) {
+func (collector *Collector) IncrementHTTPRequestCount(podName, method, service, path string, status int) {
 	collector.httpRequestCount.With(
 		prometheus.Labels{
 			"upstream_pod_name": podName,
@@ -123,7 +123,6 @@ func (collector *Collector) IncrementHTTPRequestCount(podName, method, service, 
 			"service":           service,
 			"path":              path,
 			"status":            strconv.Itoa(status),
-			"protocol":          protocol,
 		},
 	).Inc()
 }
@@ -141,28 +140,26 @@ func (collector *Collector) IncrementLogMessageCount(
 
 // ObserveHTTPRequestTime should be used to make observations of corresponding metric
 func (collector *Collector) ObserveHTTPRequestTime(
-	podName, method, service, path, protocol string, value float64) {
+	podName, method, service, path string, value float64) {
 	collector.httpRequestTime.With(
 		prometheus.Labels{
 			"upstream_pod_name": podName,
 			"service":           service,
 			"method":            method,
 			"path":              path,
-			"protocol":          protocol,
 		},
 	).Observe(value)
 }
 
 // ObserveHTTPUpstreamResponseTimeTotal should be used to make observations of corresponding metric
 func (collector *Collector) ObserveHTTPUpstreamResponseTimeTotal(
-	podName, method, service, path, protocol string, value float64) {
+	podName, method, service, path string, value float64) {
 	collector.httpUpstreamResponseTimeTotal.With(
 		prometheus.Labels{
 			"upstream_pod_name": podName,
 			"service":           service,
 			"method":            method,
 			"path":              path,
-			"protocol":          protocol,
 		},
 	).Observe(value)
 }
