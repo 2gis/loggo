@@ -9,10 +9,10 @@ type ParserSLI interface {
 
 // MetricsCollector is a metrics counter object interface for parsing sli stage
 type MetricsCollector interface {
-	IncrementHTTPRequestCount(podName, method, service, path, protocol string, status int)
+	IncrementHTTPRequestCount(podName, method, service, path string, status int)
 	IncrementHTTPRequestsTotalCount(service string)
-	ObserveHTTPRequestTime(podName, method, service, path, protocol string, value float64)
-	ObserveHTTPUpstreamResponseTimeTotal(podName, method, service, path, protocol string, value float64)
+	ObserveHTTPRequestTime(podName, method, service, path string, value float64)
+	ObserveHTTPUpstreamResponseTimeTotal(podName, method, service, path string, value float64)
 }
 
 // TransportClient is a transport interface for transport stage

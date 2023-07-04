@@ -13,7 +13,6 @@ func TestParseCorrectSLAMessage(t *testing.T) {
 		LogKeySLA:                             true,
 		LogKeyRequestMethod:                   "GET",
 		LogKeyRequestURI:                      "/hello",
-		LogKeyServerProtocol:                  "1",
 		LogKeyHost:                            "test.local",
 		LogKeyStatus:                          "200",
 		LogKeyRequestTime:                     "10.1",
@@ -31,7 +30,6 @@ func TestParseCorrectSLAMessageWithQueryParams(t *testing.T) {
 		LogKeySLA:                             true,
 		LogKeyRequestMethod:                   "GET",
 		LogKeyRequestURI:                      "/hello?filter=test",
-		LogKeyServerProtocol:                  "1",
 		LogKeyHost:                            "test.local",
 		LogKeyStatus:                          "200",
 		LogKeyRequestTime:                     "10.1",
@@ -49,7 +47,6 @@ func TestParseMessageWithUpstreamPodName(t *testing.T) {
 		LogKeySLA:                             true,
 		LogKeyRequestMethod:                   "GET",
 		LogKeyRequestURI:                      "/hello?filter=test",
-		LogKeyServerProtocol:                  "1",
 		LogKeyHost:                            "test.local",
 		LogKeyStatus:                          "200",
 		LogKeyRequestTime:                     "10.1",
@@ -103,7 +100,6 @@ func getStubMessage(path, podName string) SLIMessage {
 	upstreamResponseTime := 10.2
 	return SLIMessage{
 		URI:                       path,
-		Protocol:                  "1",
 		Method:                    "GET",
 		Status:                    200,
 		RequestTime:               10.1,

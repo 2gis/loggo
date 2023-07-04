@@ -450,7 +450,6 @@ The following fields are required to be present in log message to let it be pars
 * `host`
 * `request_method`
 * `request_uri`
-* `server_protocol`
 * `request_time`
 * `status`
 
@@ -489,10 +488,10 @@ annotations):
 
 Name | Type | Labels | Description
 | ------ | ------ | --------- | --------- |
-| http_request_count | Counter | "method", "service", "path", "status", "protocol", "upstream_pod_name" | The total number of requests processed.|
+| http_request_count | Counter | "method", "service", "path", "status", "upstream_pod_name" | The total number of requests processed.|
 | http_request_total_count | Counter | "service" | The same, by service, without detailed labels (for messages without `path` info). |
-| http_request_time | Histogram | "method", "service", "path", "protocol", "upstream_pod_name" | Histogram for HTTP request time.
-| http_upstream_response_time_total | Histogram | "method", "service", "path", "protocol", "upstream_pod_name" | Histogram for HTTP upstream response time. |
+| http_request_time | Histogram | "method", "service", "path", "upstream_pod_name" | Histogram for HTTP request time.
+| http_upstream_response_time_total | Histogram | "method", "service", "path", "upstream_pod_name" | Histogram for HTTP upstream response time. |
 
 Metrics get reset every `--metrics-reset-interval-sec`/`METRICS_RESET_INTERVAL_SEC` to clean the stale containers data
 up. Buckets for histogram metrics are configurable with CLI/env `sla-buckets`/`SLA_BUCKETS`. Default setting

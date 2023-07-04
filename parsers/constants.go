@@ -11,7 +11,6 @@ const (
 	LogKeyHost                            = "host"
 	LogKeyRequestMethod                   = "request_method"
 	LogKeyRequestURI                      = "request_uri"
-	LogKeyServerProtocol                  = "server_protocol"
 	LogKeyRequestTime                     = "request_time"
 	LogKeyStatus                          = "status"
 	LogKeyUpstreamPodName                 = "upstream_pod_name"

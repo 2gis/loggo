@@ -13,7 +13,7 @@ import (
 // ErrConstructSLI signals about failed SLA Message construction
 var ErrConstructSLI = errors.New(
 	"Empty or incorrect field 'request' in message, " +
-		"field 'request' should contain method, path and protocol version",
+		"field 'request' should contain method and path",
 )
 
 type ServiceProvider interface {
@@ -21,10 +21,10 @@ type ServiceProvider interface {
 }
 
 type MetricsCollector interface {
-	IncrementHTTPRequestCount(podName, method, service, path, protocol string, status int)
+	IncrementHTTPRequestCount(podName, method, service, path string, status int)
 	IncrementHTTPRequestsTotalCount(service string)
-	ObserveHTTPRequestTime(podName, method, service, path, protocol string, value float64)
-	ObserveHTTPUpstreamResponseTimeTotal(podName, method, service, path, protocol string, value float64)
+	ObserveHTTPRequestTime(podName, method, service, path string, value float64)
+	ObserveHTTPUpstreamResponseTimeTotal(podName, method, service, path string, value float64)
 }
 
 // SLIMessage is a structure for storage the parsed message from MQ
@@ -35,7 +35,6 @@ type SLIMessage struct {
 	// HTTP request related fields
 	Method                    string
 	URI                       string
-	Protocol                  string
 	Status                    int
 	RequestTime               float64
 	UpstreamResponseTimeTotal *float64
@@ -82,7 +81,6 @@ func (parser *SLI) Parse(entryMap common.EntryMap) {
 		slaMessage.Method,
 		service.Name,
 		pathLabel,
-		slaMessage.Protocol,
 		slaMessage.Status,
 	)
 	parser.metricsCollector.ObserveHTTPRequestTime(
@@ -90,7 +88,6 @@ func (parser *SLI) Parse(entryMap common.EntryMap) {
 		slaMessage.Method,
 		service.Name,
 		pathLabel,
-		slaMessage.Protocol,
 		slaMessage.RequestTime,
 	)
 
@@ -103,7 +100,6 @@ func (parser *SLI) Parse(entryMap common.EntryMap) {
 		slaMessage.Method,
 		service.Name,
 		pathLabel,
-		slaMessage.Protocol,
 		*slaMessage.UpstreamResponseTimeTotal,
 	)
 }
@@ -136,12 +132,6 @@ func newSLIMessage(entryMap common.EntryMap) (sliMessage SLIMessage, err error) 
 		return SLIMessage{}, ErrConstructSLI
 	}
 
-	protocol, _ := entryMap[LogKeyServerProtocol].(string)
-
-	if protocol == "" {
-		return SLIMessage{}, ErrConstructSLI
-	}
-
 	requestTime, err := strconv.ParseFloat(
 		fmt.Sprintf("%v", entryMap[LogKeyRequestTime]), 64,
 	)
@@ -164,7 +154,6 @@ func newSLIMessage(entryMap common.EntryMap) (sliMessage SLIMessage, err error) 
 		PodName:     podName,
 		Method:      method,
 		URI:         uri,
-		Protocol:    protocol,
 		Status:      int(status),
 		RequestTime: requestTime,
 	}
