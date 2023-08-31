@@ -7,7 +7,7 @@ require (
 	github.com/boltdb/bolt v1.3.1
 	github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 	github.com/fsnotify/fsnotify v1.5.4
-	github.com/garyburd/redigo v1.6.0
+	github.com/gomodule/redigo v1.8.9
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.2
 	github.com/prometheus/prometheus v2.3.1+incompatible
