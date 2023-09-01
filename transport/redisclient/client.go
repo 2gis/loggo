@@ -3,7 +3,7 @@ package redisclient
 import (
 	"time"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 
 	"github.com/2gis/loggo/configuration"
 	"github.com/2gis/loggo/transport"
@@ -18,7 +18,12 @@ type RedisClient struct {
 // NewRedisClient is a constructor for RedisClient
 func NewRedisClient(config configuration.RedisTransportConfig) *RedisClient {
 	dialFunction := func() (redis.Conn, error) {
-		c, err := redis.Dial("tcp", config.URL, redis.DialPassword(config.Password))
+		c, err := redis.Dial(
+			"tcp",
+			config.URL,
+			redis.DialUsername(config.Username),
+			redis.DialPassword(config.Password),
+		)
 
 		if err != nil {
 			return nil, err

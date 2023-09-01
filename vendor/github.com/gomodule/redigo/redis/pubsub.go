@@ -15,6 +15,7 @@
 package redis
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -36,17 +37,8 @@ type Message struct {
 	// The originating channel.
 	Channel string
 
-	// The message data.
-	Data []byte
-}
-
-// PMessage represents a pmessage notification.
-type PMessage struct {
-	// The matched pattern.
+	// The matched pattern, if any
 	Pattern string
-
-	// The originating channel.
-	Channel string
 
 	// The message data.
 	Data []byte
@@ -69,27 +61,35 @@ func (c PubSubConn) Close() error {
 
 // Subscribe subscribes the connection to the specified channels.
 func (c PubSubConn) Subscribe(channel ...interface{}) error {
-	c.Conn.Send("SUBSCRIBE", channel...)
+	if err := c.Conn.Send("SUBSCRIBE", channel...); err != nil {
+		return err
+	}
 	return c.Conn.Flush()
 }
 
 // PSubscribe subscribes the connection to the given patterns.
 func (c PubSubConn) PSubscribe(channel ...interface{}) error {
-	c.Conn.Send("PSUBSCRIBE", channel...)
+	if err := c.Conn.Send("PSUBSCRIBE", channel...); err != nil {
+		return err
+	}
 	return c.Conn.Flush()
 }
 
 // Unsubscribe unsubscribes the connection from the given channels, or from all
 // of them if none is given.
 func (c PubSubConn) Unsubscribe(channel ...interface{}) error {
-	c.Conn.Send("UNSUBSCRIBE", channel...)
+	if err := c.Conn.Send("UNSUBSCRIBE", channel...); err != nil {
+		return err
+	}
 	return c.Conn.Flush()
 }
 
 // PUnsubscribe unsubscribes the connection from the given patterns, or from all
 // of them if none is given.
 func (c PubSubConn) PUnsubscribe(channel ...interface{}) error {
-	c.Conn.Send("PUNSUBSCRIBE", channel...)
+	if err := c.Conn.Send("PUNSUBSCRIBE", channel...); err != nil {
+		return err
+	}
 	return c.Conn.Flush()
 }
 
@@ -98,13 +98,15 @@ func (c PubSubConn) PUnsubscribe(channel ...interface{}) error {
 // The connection must be subscribed to at least one channel or pattern when
 // calling this method.
 func (c PubSubConn) Ping(data string) error {
-	c.Conn.Send("PING", data)
+	if err := c.Conn.Send("PING", data); err != nil {
+		return err
+	}
 	return c.Conn.Flush()
 }
 
-// Receive returns a pushed message as a Subscription, Message, PMessage, Pong
-// or error. The return value is intended to be used directly in a type switch
-// as illustrated in the PubSubConn example.
+// Receive returns a pushed message as a Subscription, Message, Pong or error.
+// The return value is intended to be used directly in a type switch as
+// illustrated in the PubSubConn example.
 func (c PubSubConn) Receive() interface{} {
 	return c.receiveInternal(c.Conn.Receive())
 }
@@ -113,6 +115,13 @@ func (c PubSubConn) Receive() interface{} {
 // override the connection's default timeout.
 func (c PubSubConn) ReceiveWithTimeout(timeout time.Duration) interface{} {
 	return c.receiveInternal(ReceiveWithTimeout(c.Conn, timeout))
+}
+
+// ReceiveContext is like Receive, but it allows termination of the receive
+// via a Context. If the call returns due to closure of the context's Done
+// channel the underlying Conn will have been closed.
+func (c PubSubConn) ReceiveContext(ctx context.Context) interface{} {
+	return c.receiveInternal(ReceiveContext(c.Conn, ctx))
 }
 
 func (c PubSubConn) receiveInternal(replyArg interface{}, errArg error) interface{} {
@@ -135,11 +144,11 @@ func (c PubSubConn) receiveInternal(replyArg interface{}, errArg error) interfac
 		}
 		return m
 	case "pmessage":
-		var pm PMessage
-		if _, err := Scan(reply, &pm.Pattern, &pm.Channel, &pm.Data); err != nil {
+		var m Message
+		if _, err := Scan(reply, &m.Pattern, &m.Channel, &m.Data); err != nil {
 			return err
 		}
-		return pm
+		return m
 	case "subscribe", "psubscribe", "unsubscribe", "punsubscribe":
 		s := Subscription{Kind: kind}
 		if _, err := Scan(reply, &s.Channel, &s.Count); err != nil {

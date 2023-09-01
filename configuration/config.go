@@ -70,6 +70,7 @@ type SLIExporterConfig struct {
 
 type RedisTransportConfig struct {
 	URL      string
+	Username string
 	Password string
 	Key      string
 }
@@ -149,6 +150,9 @@ func GetConfig() Config {
 		Default("localhost:6379").
 		Envar("REDIS_HOSTNAME").
 		StringVar(&config.RedisTransportConfig.URL)
+	kingpin.Flag("redis-username", "Redis username to use.").
+		Envar("REDIS_USERNAME").
+		StringVar(&config.RedisTransportConfig.Username)
 	kingpin.Flag("redis-password", "Redis password to use.").
 		Envar("REDIS_PASSWORD").
 		StringVar(&config.RedisTransportConfig.Password)
