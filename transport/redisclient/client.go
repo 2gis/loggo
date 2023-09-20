@@ -42,9 +42,10 @@ func NewRedisClient(config configuration.RedisTransportConfig) *RedisClient {
 	return &RedisClient{
 		key: config.Key,
 		pool: &redis.Pool{
-			Dial:         dialFunction,
-			TestOnBorrow: testFunction,
-			MaxIdle:      transport.RedisMaxIdleConnections,
+			Dial:            dialFunction,
+			TestOnBorrow:    testFunction,
+			MaxIdle:         transport.RedisMaxIdleConnections,
+			MaxConnLifetime: config.MaxConnLifetime,
 		},
 	}
 }
