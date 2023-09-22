@@ -3,6 +3,7 @@ package configuration
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -69,11 +70,13 @@ type SLIExporterConfig struct {
 }
 
 type RedisTransportConfig struct {
-	URL      string
-	Username string
-	Password string
-	Key      string
+	URL             string
+	Username        string
+	Password        string
+	Key             string
+	MaxConnLifetime time.Duration
 }
+
 type AMQPTransportConfig struct {
 	URL      string
 	Exchange string
@@ -160,6 +163,12 @@ func GetConfig() Config {
 		Default("k8s-logs").
 		Envar("REDIS_KEY").
 		StringVar(&config.RedisTransportConfig.Key)
+	kingpin.Flag(
+		"redis-max-conn-lifetime",
+		"Close connections older than this duration. If the value is zero, then the pool does not close connections based on age.").
+		Default("0").
+		Envar("REDIS_MAX_CONN_LIFETIME").
+		DurationVar(&config.RedisTransportConfig.MaxConnLifetime)
 	kingpin.Flag("amqp-url", "AMQP host URL to use.").
 		Default("amqp://localhost/").
 		Envar("AMQP_URL").
