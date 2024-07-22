@@ -38,56 +38,46 @@ func (p *ProviderK8SServices) Retrieve() error {
 	defer p.Unlock()
 
 	p.services = make(map[string]*Service)
-	namespaces, err := p.clientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+
+	services, err := p.clientSet.CoreV1().Services(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
-		p.logger.Debugf("Error: Unable to list namespaces: %s", err.Error())
+		p.logger.Debugf("Unable to list service: %s",
+			err.Error(),
+		)
 		return err
 	}
 
-	for _, namespace := range namespaces.Items {
-		services, err := p.clientSet.CoreV1().Services(namespace.GetName()).List(context.TODO(), metav1.ListOptions{})
+	p.logger.Debugf(
+		"Process services: %d",
+		len(services.Items),
+	)
+
+	for _, item := range services.Items {
+		service, err := CreateService(p.config, item.GetObjectMeta().GetAnnotations())
 
 		if err != nil {
-			p.logger.Debugf("Unable to list service in namespace '%s': %s",
-				namespace.GetName(),
+			p.logger.Warnf(
+				"Unable to use service '%s.%s', %s",
+				item.GetObjectMeta().GetNamespace(),
+				item.GetObjectMeta().GetName(),
 				err.Error(),
 			)
-			return err
+			continue
 		}
 
-		p.logger.Debugf(
-			"Process services from namespace '%s': %d",
-			namespace.GetName(),
-			len(services.Items),
-		)
+		if service == nil {
+			continue
+		}
 
-		for _, item := range services.Items {
-			service, err := CreateService(p.config, item.GetObjectMeta().GetAnnotations())
+		service.Name = item.GetObjectMeta().GetName()
 
-			if err != nil {
-				p.logger.Warnf(
-					"Unable to use service '%s.%s', %s",
-					item.GetObjectMeta().GetNamespace(),
-					item.GetObjectMeta().GetName(),
-					err.Error(),
-				)
-				continue
+		for _, domain := range service.Domains {
+			if !strings.Contains(domain, ".") {
+				p.services[fmt.Sprintf("%s.%s", domain, p.config.ServiceDefaultDomain)] = service
 			}
 
-			if service == nil {
-				continue
-			}
-
-			service.Name = item.GetObjectMeta().GetName()
-
-			for _, domain := range service.Domains {
-				if !strings.Contains(domain, ".") {
-					p.services[fmt.Sprintf("%s.%s", domain, p.config.ServiceDefaultDomain)] = service
-				}
-
-				p.services[domain] = service
-			}
+			p.services[domain] = service
 		}
 	}
 	p.logger.Debugf("Services in registry: %v", p.services)
