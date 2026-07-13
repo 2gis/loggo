@@ -17,5 +17,6 @@ const (
 	AnnotationExporterEnableTrueDeprecated = "enable"
 	AnnotationExporterEnableTrue           = "true"
 
-
+	// LabelExporterNamespaceDisableDefault label key used to ignore namespaces for SLA service discovery
+	LabelExporterNamespaceDisableDefault = "loggo.sla/disable"
 )
