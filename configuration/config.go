@@ -67,6 +67,8 @@ type SLIExporterConfig struct {
 	AnnotationExporterEnable string
 	AnnotationExporterPaths  string
 	AnnotationSLADomains     string
+
+	LabelExporterNamespaceDisable string
 }
 
 type RedisTransportConfig struct {
@@ -307,6 +309,10 @@ func GetConfig() Config {
 		Default(AnnotationSLADomainsDefault).
 		Envar("SLA_SERVICE_ANNOTATION_DOMAINS").
 		StringVar(&config.SLIExporterConfig.AnnotationSLADomains)
+	kingpin.Flag("sla-namespace-label-disable", "Label key to ignore namespaces for SLA service discovery. If empty, namespace ignoring is disabled.").
+		Default("").
+		Envar("SLA_NAMESPACE_LABEL_DISABLE").
+		StringVar(&config.SLIExporterConfig.LabelExporterNamespaceDisable)
 
 	kingpin.Flag("user-log-fields-key", "Entry field where user log should be put.").
 		Default("").

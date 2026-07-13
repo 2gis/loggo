@@ -102,6 +102,67 @@ func getFakeKubernetesClient(broken bool, empty bool) *fake.Clientset {
 	return fake.NewSimpleClientset(services, namespaces)
 }
 
+func TestRetrieveServicesWithNamespaceDisableLabel(t *testing.T) {
+	client := getFakeKubernetesClientMultiNS()
+	config := defaultAnnotationsConfig()
+	config.LabelExporterNamespaceDisable = configuration.LabelExporterNamespaceDisableDefault
+	provider := NewProviderK8SServices(client, config, logging.NewLoggerDefault())
+	provider.Retrieve()
+
+	// "other" namespace has the disable label and should be excluded
+	assert.Len(t, provider.services, 3)
+	assert.NotNil(t, provider.services["test.2gis.ru"])
+	assert.Nil(t, provider.GetServiceByHost("other.2gis.ru"))
+}
+
+func TestRetrieveServicesWithNoNamespaceLabelsWatchesAll(t *testing.T) {
+	client := getFakeKubernetesClientMultiNS()
+	provider := NewProviderK8SServices(client, defaultAnnotationsConfig(), logging.NewLoggerDefault())
+	provider.Retrieve()
+
+	// no label filter — services from all namespaces are retrieved
+	assert.Len(t, provider.services, 6)
+}
+
+func getFakeKubernetesClientMultiNS() *fake.Clientset {
+	annotations := map[string]string{
+		"loggo.sla/enable":       "enable",
+		"loggo.sla/paths":        `[{"metrics":[".*"]}]`,
+		"router.deis.io/domains": "test.2gis.ru,test",
+	}
+	watchedService := &core.Service{
+		ObjectMeta: v1.ObjectMeta{
+			Name:        "test",
+			Namespace:   "watched",
+			Annotations: annotations,
+		},
+	}
+	otherAnnotations := map[string]string{
+		"loggo.sla/enable":       "enable",
+		"loggo.sla/paths":        `[{"metrics":[".*"]}]`,
+		"router.deis.io/domains": "other.2gis.ru,other",
+	}
+	otherService := &core.Service{
+		ObjectMeta: v1.ObjectMeta{
+			Name:        "other",
+			Namespace:   "other",
+			Annotations: otherAnnotations,
+		},
+	}
+	watchedNS := &core.Namespace{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "watched",
+		},
+	}
+	otherNS := &core.Namespace{
+		ObjectMeta: v1.ObjectMeta{
+			Name:   "other",
+			Labels: map[string]string{configuration.LabelExporterNamespaceDisableDefault: "true"},
+		},
+	}
+	return fake.NewSimpleClientset(watchedService, otherService, watchedNS, otherNS)
+}
+
 func defaultAnnotationsConfig() configuration.SLIExporterConfig {
 	return configuration.SLIExporterConfig{
 		AnnotationExporterPaths:  configuration.AnnotationExporterPathsDefault,

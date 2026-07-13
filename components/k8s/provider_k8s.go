@@ -39,6 +39,24 @@ func (p *ProviderK8SServices) Retrieve() error {
 
 	p.services = make(map[string]*Service)
 
+	// Build namespace ignore list when label-based filtering is configured.
+	// This costs one extra Namespaces API call but keeps Services to a single request.
+	var disabledNamespaces map[string]bool
+	if p.config.LabelExporterNamespaceDisable != "" {
+		nsList, err := p.clientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{
+			LabelSelector: p.config.LabelExporterNamespaceDisable,
+		})
+		if err != nil {
+			p.logger.Debugf("Unable to list namespaces: %s", err.Error())
+			return err
+		}
+		disabledNamespaces = make(map[string]bool, len(nsList.Items))
+		for _, ns := range nsList.Items {
+			disabledNamespaces[ns.GetName()] = true
+		}
+		p.logger.Debugf("Disabled namespaces: %v", disabledNamespaces)
+	}
+
 	services, err := p.clientSet.CoreV1().Services(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
@@ -54,6 +72,10 @@ func (p *ProviderK8SServices) Retrieve() error {
 	)
 
 	for _, item := range services.Items {
+		if disabledNamespaces != nil && disabledNamespaces[item.GetNamespace()] {
+			continue
+		}
+
 		service, err := CreateService(p.config, item.GetObjectMeta().GetAnnotations())
 
 		if err != nil {
