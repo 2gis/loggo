@@ -30,6 +30,7 @@ import (
 	"github.com/2gis/loggo/transport"
 	"github.com/2gis/loggo/transport/amqpclient"
 	"github.com/2gis/loggo/transport/firehoseclient"
+	"github.com/2gis/loggo/transport/noopclient"
 	"github.com/2gis/loggo/transport/redisclient"
 )
 
@@ -56,6 +57,8 @@ func main() {
 		if err != nil {
 			logger.Fatalf("Unable to init firehose client, %s", err)
 		}
+	case transport.TypeNoop:
+		transportClient = noopclient.NewNoopClient()
 	default:
 		logger.Fatalf(
 			"Unsupported transport type, supported types: [%s].",
