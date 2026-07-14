@@ -147,7 +147,7 @@ func GetConfig() Config {
 		IntVar(&config.TargetsRefreshIntervalSec)
 
 	// transport
-	kingpin.Flag("transport", "Transport type for log messages [amqp | redis]").
+	kingpin.Flag("transport", "Transport type for log messages [amqp | redis | firehose | noop]").
 		Default("amqp").
 		Envar("TRANSPORT").
 		StringVar(&config.Transport)
