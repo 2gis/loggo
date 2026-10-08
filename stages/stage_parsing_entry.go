@@ -17,7 +17,6 @@ var ErrUnknownMessageFormat = errors.New("unknown message log format")
 type StageParsingEntry struct {
 	stage
 
-	parseDockerFormat     ParserFunction
 	parseContainerDFormat ParserFunction
 	parseDefault          ParserFunctionDefault
 
@@ -39,12 +38,11 @@ func (s *StageParsingEntry) Close() {
 }
 
 // NewStageParsingEntry is a StageParsingEntry constructor
-func NewStageParsingEntry(input <-chan *common.Entry, parseDocker, parseContainerD ParserFunction,
+func NewStageParsingEntry(input <-chan *common.Entry, parseContainerD ParserFunction,
 	parserDefault ParserFunctionDefault, extendsField string, logger logging.Logger) *StageParsingEntry {
 	stage := &StageParsingEntry{
 		stage: stage{wg: &sync.WaitGroup{}, logger: logger},
 
-		parseDockerFormat:     parseDocker,
 		parseContainerDFormat: parseContainerD,
 		parseDefault:          parserDefault,
 
@@ -63,8 +61,6 @@ func (s *StageParsingEntry) proceed() {
 		var err error
 
 		switch message.Format {
-		case common.CRITypeDocker:
-			entryMap, err = s.parseDockerFormat(message.Origin)
 		case common.CRITypeContainerD:
 			entryMap, err = s.parseContainerDFormat(message.Origin)
 		default:
