@@ -1,6 +1,6 @@
 module github.com/2gis/loggo
 
-go 1.18
+go 1.27
 
 require (
 	github.com/aws/aws-sdk-go v1.40.24
