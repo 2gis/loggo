@@ -67,11 +67,8 @@ type Config struct {
 	// instead of setting this value directly.
 	WrapTransport WrapperFunc
 
-	// Dial specifies the dial function for creating unencrypted TCP connections.
-	// If specified, this transport will be non-cacheable unless DialHolder is also set.
-	Dial func(ctx context.Context, network, address string) (net.Conn, error)
-	// DialHolder can be populated to make transport configs cacheable.
-	// If specified, DialHolder.Dial must be equal to Dial.
+	// DialHolder specifies the dial function for creating unencrypted TCP connections.
+	// This struct indirection is used to make transport configs cacheable.
 	DialHolder *DialHolder
 
 	// Proxy is the proxy func to be used for all requests made by this
@@ -121,7 +118,7 @@ func (c *Config) HasCertAuth() bool {
 
 // HasCertCallback returns whether the configuration has certificate callback or not.
 func (c *Config) HasCertCallback() bool {
-	return c.TLS.GetCert != nil
+	return c.TLS.GetCertHolder != nil
 }
 
 // Wrap adds a transport middleware function that will give the caller
@@ -137,7 +134,8 @@ type TLSConfig struct {
 	CAFile         string // Path of the PEM-encoded server trusted root certificates.
 	CertFile       string // Path of the PEM-encoded client certificate.
 	KeyFile        string // Path of the PEM-encoded client key.
-	ReloadTLSFiles bool   // Set to indicate that the original config provided files, and that they should be reloaded
+	ReloadTLSFiles bool   // Set to indicate that the original config provided files, and that they should be reloaded.
+	ReloadCAFiles  bool   // Set to indicate that CA files should be reloaded from disk.
 
 	Insecure   bool   // Server should be accessed without verifying the certificate. For testing only.
 	ServerName string // Override for the server name passed to the server for SNI and used to verify certificates.
@@ -153,10 +151,7 @@ type TLSConfig struct {
 	NextProtos []string
 
 	// Callback that returns a TLS client certificate. CertData, CertFile, KeyData and KeyFile supercede this field.
-	// If specified, this transport is non-cacheable unless CertHolder is populated.
-	GetCert func() (*tls.Certificate, error)
-	// CertHolder can be populated to make transport configs that set GetCert cacheable.
-	// If set, CertHolder.GetCert must be equal to GetCert.
+	// This struct indirection is used to make transport configs cacheable.
 	GetCertHolder *GetCertHolder
 }
 

@@ -18,10 +18,14 @@ package spec3
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
-	"k8s.io/kube-openapi/pkg/validation/spec"
 	"github.com/go-openapi/swag"
+	"k8s.io/kube-openapi/pkg/internal"
+	jsonv2 "k8s.io/kube-openapi/pkg/internal/third_party/go-json-experiment/json"
+	"k8s.io/kube-openapi/pkg/internal/third_party/go-json-experiment/json/jsontext"
+	"k8s.io/kube-openapi/pkg/validation/spec"
 )
 
 // Responses holds the list of possible responses as they are returned from executing this operation
@@ -34,6 +38,9 @@ type Responses struct {
 
 // MarshalJSON is a custom marshal function that knows how to encode Responses as JSON
 func (r *Responses) MarshalJSON() ([]byte, error) {
+	if internal.UseOptimizedJSONMarshalingV3 {
+		return internal.DeterministicMarshal(r)
+	}
 	b1, err := json.Marshal(r.ResponsesProps)
 	if err != nil {
 		return nil, err
@@ -45,14 +52,35 @@ func (r *Responses) MarshalJSON() ([]byte, error) {
 	return swag.ConcatJSON(b1, b2), nil
 }
 
+func (r Responses) MarshalJSONTo(enc *jsontext.Encoder) error {
+	type ArbitraryKeys map[string]interface{}
+	var x struct {
+		ArbitraryKeys ArbitraryKeys `json:",inline"`
+		Default       *Response     `json:"default,omitzero"`
+	}
+	x.ArbitraryKeys = make(map[string]any, len(r.Extensions)+len(r.StatusCodeResponses))
+	for k, v := range r.Extensions {
+		if internal.IsExtensionKey(k) {
+			x.ArbitraryKeys[k] = v
+		}
+	}
+	for k, v := range r.StatusCodeResponses {
+		x.ArbitraryKeys[strconv.Itoa(k)] = v
+	}
+	x.Default = r.Default
+	return jsonv2.MarshalEncode(enc, x)
+}
+
 func (r *Responses) UnmarshalJSON(data []byte) error {
+	if internal.UseOptimizedJSONUnmarshalingV3 {
+		return jsonv2.Unmarshal(data, r)
+	}
 	if err := json.Unmarshal(data, &r.ResponsesProps); err != nil {
 		return err
 	}
 	if err := json.Unmarshal(data, &r.VendorExtensible); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -78,23 +106,89 @@ func (r ResponsesProps) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON unmarshals responses from JSON
 func (r *ResponsesProps) UnmarshalJSON(data []byte) error {
-	var res map[string]*Response
+	if internal.UseOptimizedJSONUnmarshalingV3 {
+		return jsonv2.Unmarshal(data, r)
+	}
+	var res map[string]json.RawMessage
 	if err := json.Unmarshal(data, &res); err != nil {
-		return nil
+		return err
 	}
 	if v, ok := res["default"]; ok {
-		r.Default = v
+		value := Response{}
+		if err := json.Unmarshal(v, &value); err != nil {
+			return err
+		}
+		r.Default = &value
 		delete(res, "default")
 	}
 	for k, v := range res {
+		// Take all integral keys
 		if nk, err := strconv.Atoi(k); err == nil {
 			if r.StatusCodeResponses == nil {
 				r.StatusCodeResponses = map[int]*Response{}
 			}
-			r.StatusCodeResponses[nk] = v
+			value := Response{}
+			if err := json.Unmarshal(v, &value); err != nil {
+				return err
+			}
+			r.StatusCodeResponses[nk] = &value
 		}
 	}
 	return nil
+}
+
+func (r *Responses) UnmarshalJSONFrom(dec *jsontext.Decoder) (err error) {
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return err
+	}
+	switch k := tok.Kind(); k {
+	case 'n':
+		*r = Responses{}
+		return nil
+	case '{':
+		for {
+			tok, err := dec.ReadToken()
+			if err != nil {
+				return err
+			}
+			if tok.Kind() == '}' {
+				return nil
+			}
+			switch k := tok.String(); {
+			case internal.IsExtensionKey(k):
+				var ext any
+				if err := jsonv2.UnmarshalDecode(dec, &ext); err != nil {
+					return err
+				}
+
+				if r.Extensions == nil {
+					r.Extensions = make(map[string]any)
+				}
+				r.Extensions[k] = ext
+			case k == "default":
+				resp := Response{}
+				if err := jsonv2.UnmarshalDecode(dec, &resp); err != nil {
+					return err
+				}
+				r.ResponsesProps.Default = &resp
+			default:
+				if nk, err := strconv.Atoi(k); err == nil {
+					resp := Response{}
+					if err := jsonv2.UnmarshalDecode(dec, &resp); err != nil {
+						return err
+					}
+
+					if r.StatusCodeResponses == nil {
+						r.StatusCodeResponses = map[int]*Response{}
+					}
+					r.StatusCodeResponses[nk] = &resp
+				}
+			}
+		}
+	default:
+		return fmt.Errorf("unknown JSON kind: %v", k)
+	}
 }
 
 // Response describes a single response from an API Operation, more at https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#responseObject
@@ -108,6 +202,9 @@ type Response struct {
 
 // MarshalJSON is a custom marshal function that knows how to encode Response as JSON
 func (r *Response) MarshalJSON() ([]byte, error) {
+	if internal.UseOptimizedJSONMarshalingV3 {
+		return internal.DeterministicMarshal(r)
+	}
 	b1, err := json.Marshal(r.Refable)
 	if err != nil {
 		return nil, err
@@ -123,7 +220,22 @@ func (r *Response) MarshalJSON() ([]byte, error) {
 	return swag.ConcatJSON(b1, b2, b3), nil
 }
 
+func (r Response) MarshalJSONTo(enc *jsontext.Encoder) error {
+	var x struct {
+		Ref           string          `json:"$ref,omitempty"`
+		Extensions    spec.Extensions `json:",inline"`
+		ResponseProps `json:",inline"`
+	}
+	x.Ref = r.Refable.Ref.String()
+	x.Extensions = internal.SanitizeExtensions(r.Extensions)
+	x.ResponseProps = r.ResponseProps
+	return jsonv2.MarshalEncode(enc, x)
+}
+
 func (r *Response) UnmarshalJSON(data []byte) error {
+	if internal.UseOptimizedJSONUnmarshalingV3 {
+		return jsonv2.Unmarshal(data, r)
+	}
 	if err := json.Unmarshal(data, &r.Refable); err != nil {
 		return err
 	}
@@ -133,7 +245,22 @@ func (r *Response) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &r.VendorExtensible); err != nil {
 		return err
 	}
+	return nil
+}
 
+func (r *Response) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	var x struct {
+		Extensions spec.Extensions `json:",inline"`
+		ResponseProps
+	}
+	if err := jsonv2.UnmarshalDecode(dec, &x); err != nil {
+		return err
+	}
+	if err := internal.JSONRefFromMap(&r.Ref.Ref, x.Extensions); err != nil {
+		return err
+	}
+	r.Extensions = internal.SanitizeExtensions(x.Extensions)
+	r.ResponseProps = x.ResponseProps
 	return nil
 }
 
@@ -149,7 +276,6 @@ type ResponseProps struct {
 	Links map[string]*Link `json:"links,omitempty"`
 }
 
-
 // Link represents a possible design-time link for a response, more at https://swagger.io/specification/#link-object
 type Link struct {
 	spec.Refable
@@ -159,6 +285,9 @@ type Link struct {
 
 // MarshalJSON is a custom marshal function that knows how to encode Link as JSON
 func (r *Link) MarshalJSON() ([]byte, error) {
+	if internal.UseOptimizedJSONMarshalingV3 {
+		return internal.DeterministicMarshal(r)
+	}
 	b1, err := json.Marshal(r.Refable)
 	if err != nil {
 		return nil, err
@@ -174,7 +303,22 @@ func (r *Link) MarshalJSON() ([]byte, error) {
 	return swag.ConcatJSON(b1, b2, b3), nil
 }
 
+func (r *Link) MarshalJSONTo(enc *jsontext.Encoder) error {
+	var x struct {
+		Ref        string          `json:"$ref,omitempty"`
+		Extensions spec.Extensions `json:",inline"`
+		LinkProps  `json:",inline"`
+	}
+	x.Ref = r.Refable.Ref.String()
+	x.Extensions = internal.SanitizeExtensions(r.Extensions)
+	x.LinkProps = r.LinkProps
+	return jsonv2.MarshalEncode(enc, x)
+}
+
 func (r *Link) UnmarshalJSON(data []byte) error {
+	if internal.UseOptimizedJSONUnmarshalingV3 {
+		return jsonv2.Unmarshal(data, r)
+	}
 	if err := json.Unmarshal(data, &r.Refable); err != nil {
 		return err
 	}
@@ -185,6 +329,22 @@ func (r *Link) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	return nil
+}
+
+func (l *Link) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	var x struct {
+		Extensions spec.Extensions `json:",inline"`
+		LinkProps
+	}
+	if err := jsonv2.UnmarshalDecode(dec, &x); err != nil {
+		return err
+	}
+	if err := internal.JSONRefFromMap(&l.Ref.Ref, x.Extensions); err != nil {
+		return err
+	}
+	l.Extensions = internal.SanitizeExtensions(x.Extensions)
+	l.LinkProps = x.LinkProps
 	return nil
 }
 

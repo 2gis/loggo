@@ -5,10 +5,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
-	"github.com/prometheus/prometheus/pkg/textparse"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin/v2"
 
 	"github.com/2gis/loggo/configuration"
 	"github.com/2gis/loggo/transport/amqpclient"
@@ -133,12 +134,25 @@ func testMetrics() {
 
 	// parse metrics and compare it with expectations
 	expected := getMetricsExpectations()
-	parser := textparse.New(metrics)
+	for _, line := range strings.Split(string(metrics), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
 
-	for parser.Next() {
-		metric, _, value := parser.At()
+		sep := strings.LastIndex(line, " ")
+		if sep < 0 {
+			continue
+		}
+
+		value, err := strconv.ParseFloat(line[sep+1:], 64)
+		if err != nil {
+			continue
+		}
+
+		metric := line[:sep]
 		for _, element := range expected {
-			if string(metric) == element.metric && value == element.value {
+			if metric == element.metric && value == element.value {
 				element.foundFlag = true
 			}
 		}

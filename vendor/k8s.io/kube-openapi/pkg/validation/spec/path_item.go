@@ -18,6 +18,9 @@ import (
 	"encoding/json"
 
 	"github.com/go-openapi/swag"
+	"k8s.io/kube-openapi/pkg/internal"
+	jsonv2 "k8s.io/kube-openapi/pkg/internal/third_party/go-json-experiment/json"
+	"k8s.io/kube-openapi/pkg/internal/third_party/go-json-experiment/json/jsontext"
 )
 
 // PathItemProps the path item specific properties
@@ -46,6 +49,10 @@ type PathItem struct {
 
 // UnmarshalJSON hydrates this items instance with the data from JSON
 func (p *PathItem) UnmarshalJSON(data []byte) error {
+	if internal.UseOptimizedJSONUnmarshaling {
+		return jsonv2.Unmarshal(data, p)
+	}
+
 	if err := json.Unmarshal(data, &p.Refable); err != nil {
 		return err
 	}
@@ -55,8 +62,29 @@ func (p *PathItem) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &p.PathItemProps)
 }
 
+func (p *PathItem) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	var x struct {
+		Extensions Extensions `json:",inline"`
+		PathItemProps
+	}
+
+	if err := jsonv2.UnmarshalDecode(dec, &x); err != nil {
+		return err
+	}
+	if err := p.Refable.Ref.fromMap(x.Extensions); err != nil {
+		return err
+	}
+	p.Extensions = internal.SanitizeExtensions(x.Extensions)
+	p.PathItemProps = x.PathItemProps
+
+	return nil
+}
+
 // MarshalJSON converts this items object to JSON
 func (p PathItem) MarshalJSON() ([]byte, error) {
+	if internal.UseOptimizedJSONMarshaling {
+		return internal.DeterministicMarshal(p)
+	}
 	b3, err := json.Marshal(p.Refable)
 	if err != nil {
 		return nil, err
@@ -71,4 +99,16 @@ func (p PathItem) MarshalJSON() ([]byte, error) {
 	}
 	concated := swag.ConcatJSON(b3, b4, b5)
 	return concated, nil
+}
+
+func (p PathItem) MarshalJSONTo(enc *jsontext.Encoder) error {
+	var x struct {
+		Ref        string     `json:"$ref,omitempty"`
+		Extensions Extensions `json:",inline"`
+		PathItemProps
+	}
+	x.Ref = p.Refable.Ref.String()
+	x.Extensions = internal.SanitizeExtensions(p.Extensions)
+	x.PathItemProps = p.PathItemProps
+	return jsonv2.MarshalEncode(enc, x)
 }
