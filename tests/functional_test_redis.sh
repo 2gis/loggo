@@ -8,7 +8,7 @@ docker-compose up -d redis
 timeout --preserve-status 5 ./build/loggo/loggo --no-log-journald --no-sla-exporter \
   --flush-interval-sec=1 --buffer-max-size=25 \
   --transport="redis" \
-  --logs-path="tests/fixtures/pods" --position-file-path="loggo-logs.pos" \
+  --logs-path="tests/fixtures/pods/*/*/*.log" --position-file-path="loggo-logs.pos" \
   --containers-ignore-file-path="loggo-containers-ignore" &&
   echo "Loggo write launch ok" || echo "Loggo write launch failed"
 
@@ -23,7 +23,7 @@ sleep 5
 timeout --preserve-status 5 ./build/loggo/loggo --no-log-journald --no-sla-exporter \
   --flush-interval-sec=1 --buffer-max-size=25 \
   --transport="redis" \
-  --logs-path="tests/fixtures/pods_containerd" --position-file-path="loggo-logs.pos" \
+  --logs-path="tests/fixtures/pods_containerd/*/*/*.log" --position-file-path="loggo-logs.pos" \
   --containers-ignore-file-path="loggo-containers-ignore" &&
   echo "Loggo write launch ok" || echo "Loggo write launch failed"
 

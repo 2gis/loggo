@@ -71,7 +71,7 @@ func main() {
 		logger.Fatalln(err)
 	}
 
-	providerContainers, err := containers.NewProviderContainers(config.LogsPath, logger)
+	providerContainers, err := containers.NewProviderContainers(config.LogsPath, config.LogsExcludePath, logger)
 	if err != nil {
 		logger.Fatalln(err)
 	}

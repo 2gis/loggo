@@ -1,7 +1,7 @@
 package containers
 
 import (
-	"io/ioutil"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,12 +10,7 @@ import (
 	"github.com/2gis/loggo/logging"
 )
 
-// Container logs are expected at <logsPath>/<namespace>_<pod>_<id>/<container>/<n>.log
-
-const (
-	loggoContainerName = "loggo"
-	logFilesSuffix     = ".log"
-)
+// Matched files are expected to be located at .../<namespace>_<pod>_<id>/<container>/<n>.log
 
 // Container represents container configuration
 type Container struct {
@@ -51,9 +46,10 @@ type StateSection struct {
 	Running bool
 }
 
-// ProviderContainers seeks for logs in requested logPath and resolves links
+// ProviderContainers seeks for logs matching include glob patterns and not matching exclude ones
 type ProviderContainers struct {
-	logsPath string
+	includes []string
+	excludes []string
 	logger   logging.Logger
 }
 
@@ -79,46 +75,63 @@ func (c *Container) getLabelValue(label string) string {
 	return ""
 }
 
-// NewProviderContainers is ProviderContainers constructor
-func NewProviderContainers(path string, logger logging.Logger) (*ProviderContainers, error) {
-	absPath, err := filepath.Abs(path)
+// NewProviderContainers is ProviderContainers constructor.
+// Both arguments are comma-separated lists of glob patterns (see filepath.Match);
+// '*' does not match path separators.
+func NewProviderContainers(include, exclude string, logger logging.Logger) (*ProviderContainers, error) {
+	includes := splitPatterns(include)
+	excludes := splitPatterns(exclude)
 
-	if err != nil {
-		return nil, err
+	if len(includes) == 0 {
+		return nil, fmt.Errorf("logs path must contain at least one pattern")
 	}
 
-	logger.Infof("Absolute path to search logs in: '%s'", absPath)
+	for _, pattern := range append(append([]string{}, includes...), excludes...) {
+		if _, err := filepath.Match(pattern, ""); err != nil {
+			return nil, fmt.Errorf("invalid pattern '%s': %w", pattern, err)
+		}
+	}
+
+	logger.Infof("Searching logs by patterns: %v, excluding: %v", includes, excludes)
 
 	return &ProviderContainers{
-		logsPath: absPath,
+		includes: includes,
+		excludes: excludes,
 		logger:   logger,
 	}, nil
+}
+
+func splitPatterns(value string) []string {
+	patterns := make([]string, 0)
+
+	for _, pattern := range strings.Split(value, ",") {
+		if pattern = strings.TrimSpace(pattern); pattern != "" {
+			patterns = append(patterns, pattern)
+		}
+	}
+
+	return patterns
 }
 
 // Containers seek and return all Containers
 func (provider *ProviderContainers) Containers() (Containers, error) {
 	containers := make(Containers)
-	directories, err := Tree(provider.logsPath)
 
-	if err != nil {
-		return containers, err
-	}
-
-	for _, dir := range directories {
-		files, err := Files(dir)
+	for _, pattern := range provider.includes {
+		paths, err := filepath.Glob(pattern)
 
 		if err != nil {
-			provider.logger.Warnf("containers provider is unable to read dir: %s", dir)
-			continue
+			return containers, err
 		}
 
-		for _, path := range files {
-			container := deserializeContainerConfigContainerD(path)
-			if !strings.HasSuffix(container.LogPath, logFilesSuffix) {
+		for _, path := range paths {
+			if provider.excluded(path) || !isRegularFile(path) {
 				continue
 			}
 
-			if strings.Contains(container.GetName(), loggoContainerName) {
+			container, ok := deserializeContainerConfigContainerD(path)
+			if !ok {
+				provider.logger.Warnf("containers provider: unexpected log path layout, skipping: %s", path)
 				continue
 			}
 
@@ -129,58 +142,31 @@ func (provider *ProviderContainers) Containers() (Containers, error) {
 	return containers, nil
 }
 
-func Tree(path string) ([]string, error) {
-	directories := make([]string, 0, 1)
-	files, err := ioutil.ReadDir(path)
-
-	if err != nil {
-		return directories, err
+func (provider *ProviderContainers) excluded(path string) bool {
+	for _, pattern := range provider.excludes {
+		if matched, _ := filepath.Match(pattern, path); matched {
+			return true
+		}
 	}
 
-	for _, file := range files {
-		if !file.IsDir() {
-			continue
-		}
-
-		filePath := filepath.Join(path, file.Name())
-		subdirectories, err := Tree(filePath)
-
-		if err != nil {
-			return directories, err
-		}
-
-		directories = append(directories, filePath)
-		directories = append(directories, subdirectories...)
-	}
-
-	return directories, nil
+	return false
 }
 
-// Files returns regular (non-symlink) files located directly in the given directory
-func Files(path string) ([]string, error) {
-	files := make([]string, 0)
+// isRegularFile reports whether path is a non-symlink, non-directory file
+func isRegularFile(path string) bool {
+	info, err := os.Lstat(path)
 
-	content, err := ioutil.ReadDir(path)
-
-	if err != nil {
-		return files, err
-	}
-
-	for _, file := range content {
-		if file.IsDir() || file.Mode()&os.ModeSymlink != 0 {
-			continue
-		}
-
-		files = append(files, filepath.Join(path, file.Name()))
-	}
-
-	return files, nil
+	return err == nil && info.Mode().IsRegular()
 }
 
-func deserializeContainerConfigContainerD(path string) *Container {
+func deserializeContainerConfigContainerD(path string) (*Container, bool) {
 	containerDir := filepath.Dir(path)
 
 	split := strings.Split(filepath.Base(filepath.Dir(containerDir)), "_")
+	if len(split) != 3 {
+		return nil, false
+	}
+
 	namespace := split[0]
 	pod := split[1]
 	id := split[2]
@@ -198,5 +184,5 @@ func deserializeContainerConfigContainerD(path string) *Container {
 		},
 		// todo: hotfix, until we'll be able to evaluate it
 		State: StateSection{Running: true},
-	}
+	}, true
 }

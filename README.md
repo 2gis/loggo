@@ -104,6 +104,8 @@ spec:
 
         - name: LOGS_PATH
           value: "{{ logs_path }}"
+        - name: LOGS_EXCLUDE_PATH
+          value: "{{ logs_exclude_path }}"
         - name: POSITION_FILE_PATH
           value: "{{ position_file_path }}"
         - name: FROM_TAIL_FLAG
@@ -157,8 +159,11 @@ Configuration parameters can be set via CLI or in environment variables as shown
 
 ## Logic
 
-Basically, Loggo reads path specified (`LOGS_PATH`), assuming that it's the directory with CRI/Containerd logs that are
-created by container engine in Kubernetes.
+Basically, Loggo reads log files matching glob patterns (`LOGS_PATH`, comma-separated, default
+`/var/log/pods/*/*/*.log`) and not matching exclude patterns (`LOGS_EXCLUDE_PATH`, comma-separated, default
+`/var/log/pods/*/*loggo*/*.log`), assuming that they are CRI/Containerd logs that are
+created by container engine in Kubernetes. Files must be located at `<namespace>_<pod>_<id>/<container>/<n>.log`.
+`*` does not match `/`; symlinks are skipped.
 
 Once a log file is found, Loggo starts to read it, considering its content as "container logs"
 and does the following:
