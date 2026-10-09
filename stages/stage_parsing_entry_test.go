@@ -31,21 +31,21 @@ func TestStageParsingEntryTest(t *testing.T) {
 		entryMap common.EntryMap
 	}{
 		{
-			entry:    common.Entry{Origin: []byte("value"), Format: common.CRITypeDocker},
+			entry:    common.Entry{Origin: []byte("value"), Format: common.CRITypeContainerD},
 			entryMap: common.EntryMap{"line": "value"},
 		},
 		{
-			entry:    common.Entry{Origin: []byte(""), Format: common.CRITypeDocker},
+			entry:    common.Entry{Origin: []byte(""), Format: common.CRITypeContainerD},
 			entryMap: common.EntryMap{"default": true},
 		},
 		{
-			entry:    common.Entry{Origin: []byte(nil), Format: common.CRITypeDocker},
+			entry:    common.Entry{Origin: []byte(nil), Format: common.CRITypeContainerD},
 			entryMap: common.EntryMap{"default": true},
 		},
 	}
 
 	input := make(chan *common.Entry, len(expectations))
-	stage := NewStageParsingEntry(input, parserFunctionTest, nil, parserFunctionDefaultTest, "", logging.NewLoggerDefault())
+	stage := NewStageParsingEntry(input, parserFunctionTest, parserFunctionDefaultTest, "", logging.NewLoggerDefault())
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 

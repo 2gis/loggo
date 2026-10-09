@@ -45,5 +45,4 @@ const (
 
 const (
 	CRITypeContainerD = "containerd"
-	CRITypeDocker     = "docker"
 )

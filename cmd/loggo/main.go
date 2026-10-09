@@ -176,7 +176,6 @@ func main() {
 
 	stageParsing := stages.NewStageParsingEntry(
 		workersDispatcher.Out(),
-		parsers.CreateParserDockerFormat(config.ParserConfig),
 		parsers.CreateParserContainerDFormat(config.ParserConfig),
 		parsers.CreateParserPlain(config.ParserConfig),
 		config.ParserConfig.ExtendsFieldsKey,

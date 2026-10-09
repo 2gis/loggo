@@ -319,7 +319,7 @@ func GetConfig() Config {
 		Envar("USER_LOG_FIELDS_KEY").
 		StringVar(&config.ParserConfig.UserLogFieldsKey)
 
-	kingpin.Flag("cri-fields-key", "Entry field where docker/containerd engine fields map should be put.").
+	kingpin.Flag("cri-fields-key", "Entry field where containerd engine fields map should be put.").
 		Default("").
 		Envar("cri_FIELDS_KEY").
 		StringVar(&config.ParserConfig.CRIFieldsKey)

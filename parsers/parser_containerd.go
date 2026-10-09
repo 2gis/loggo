@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 
@@ -46,4 +47,35 @@ func setContainerDFields(entryMap common.EntryMap, targetField, time, stream str
 		LogKeyTime:   time,
 		LogKeyStream: stream,
 	}
+}
+
+func setLogFieldContent(entryMap common.EntryMap, userLogField, rawField, logFieldContent string, flatten bool) error {
+	var inner interface{}
+
+	baseMap := selectBaseMap(entryMap, userLogField)
+	err := json.Unmarshal([]byte(logFieldContent), &inner)
+	innerMap, ok := inner.(map[string]interface{})
+	if err != nil || !ok {
+		baseMap[rawField] = logFieldContent
+		return nil
+	}
+
+	processNginxFields(innerMap)
+
+	if !flatten {
+		baseMap.Extend(innerMap)
+		return nil
+	}
+
+	return common.Flatten(baseMap, innerMap)
+}
+
+func selectBaseMap(baseMap common.EntryMap, userLogField string) common.EntryMap {
+	if userLogField == "" {
+		return baseMap
+	}
+
+	subMap := make(common.EntryMap)
+	baseMap[userLogField] = subMap
+	return subMap
 }
