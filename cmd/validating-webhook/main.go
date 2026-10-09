@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -24,7 +25,7 @@ import (
 type validator struct {
 	Client  client.Client
 	Config  configuration.Config
-	decoder *admission.Decoder
+	decoder admission.Decoder
 }
 
 func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -42,11 +43,6 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	return admission.Allowed("")
 }
 
-func (v *validator) InjectDecoder(d *admission.Decoder) error {
-	v.decoder = d
-	return nil
-}
-
 func main() {
 	c := configuration.GetConfig()
 	log.Printf("Starting with configuration: %s", c.ToString())
@@ -59,8 +55,8 @@ func main() {
 	}
 	mgr, err := manager.New(restconfig, manager.Options{
 		HealthProbeBindAddress: ":8090",
-		MetricsBindAddress:     ":8080",
-		Port:                   9443,
+		Metrics:                metricsserver.Options{BindAddress: ":8080"},
+		WebhookServer:          webhook.NewServer(webhook.Options{Port: 9443}),
 	})
 	if err != nil {
 		logger.Fatalln(err)
@@ -80,8 +76,9 @@ func main() {
 	logger.Printf("Registering validating-webhook to the webhook server")
 	hookServer.Register("/validate", &webhook.Admission{
 		Handler: &validator{
-			Client: mgr.GetClient(),
-			Config: c,
+			Client:  mgr.GetClient(),
+			Config:  c,
+			decoder: admission.NewDecoder(mgr.GetScheme()),
 		},
 	})
 

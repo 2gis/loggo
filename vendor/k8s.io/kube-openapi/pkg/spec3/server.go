@@ -18,9 +18,12 @@ package spec3
 
 import (
 	"encoding/json"
-	"k8s.io/kube-openapi/pkg/validation/spec"
-	"github.com/go-openapi/swag"
 
+	"github.com/go-openapi/swag"
+	"k8s.io/kube-openapi/pkg/internal"
+	jsonv2 "k8s.io/kube-openapi/pkg/internal/third_party/go-json-experiment/json"
+	"k8s.io/kube-openapi/pkg/internal/third_party/go-json-experiment/json/jsontext"
+	"k8s.io/kube-openapi/pkg/validation/spec"
 )
 
 type Server struct {
@@ -39,6 +42,9 @@ type ServerProps struct {
 
 // MarshalJSON is a custom marshal function that knows how to encode Responses as JSON
 func (s *Server) MarshalJSON() ([]byte, error) {
+	if internal.UseOptimizedJSONMarshalingV3 {
+		return internal.DeterministicMarshal(s)
+	}
 	b1, err := json.Marshal(s.ServerProps)
 	if err != nil {
 		return nil, err
@@ -50,13 +56,41 @@ func (s *Server) MarshalJSON() ([]byte, error) {
 	return swag.ConcatJSON(b1, b2), nil
 }
 
+func (s *Server) MarshalJSONTo(enc *jsontext.Encoder) error {
+	var x struct {
+		ServerProps `json:",inline"`
+		Extensions  spec.Extensions `json:",inline"`
+	}
+	x.Extensions = internal.SanitizeExtensions(s.Extensions)
+	x.ServerProps = s.ServerProps
+	return jsonv2.MarshalEncode(enc, x)
+}
+
 func (s *Server) UnmarshalJSON(data []byte) error {
+	if internal.UseOptimizedJSONUnmarshalingV3 {
+		return jsonv2.Unmarshal(data, s)
+	}
+
 	if err := json.Unmarshal(data, &s.ServerProps); err != nil {
 		return err
 	}
 	if err := json.Unmarshal(data, &s.VendorExtensible); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (s *Server) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	var x struct {
+		Extensions spec.Extensions `json:",inline"`
+		ServerProps
+	}
+	if err := jsonv2.UnmarshalDecode(dec, &x); err != nil {
+		return err
+	}
+	s.Extensions = internal.SanitizeExtensions(x.Extensions)
+	s.ServerProps = x.ServerProps
+
 	return nil
 }
 
@@ -76,6 +110,9 @@ type ServerVariableProps struct {
 
 // MarshalJSON is a custom marshal function that knows how to encode Responses as JSON
 func (s *ServerVariable) MarshalJSON() ([]byte, error) {
+	if internal.UseOptimizedJSONMarshalingV3 {
+		return internal.DeterministicMarshal(s)
+	}
 	b1, err := json.Marshal(s.ServerVariableProps)
 	if err != nil {
 		return nil, err
@@ -87,12 +124,39 @@ func (s *ServerVariable) MarshalJSON() ([]byte, error) {
 	return swag.ConcatJSON(b1, b2), nil
 }
 
+func (s *ServerVariable) MarshalJSONTo(enc *jsontext.Encoder) error {
+	var x struct {
+		ServerVariableProps `json:",inline"`
+		Extensions          spec.Extensions `json:",inline"`
+	}
+	x.Extensions = internal.SanitizeExtensions(s.Extensions)
+	x.ServerVariableProps = s.ServerVariableProps
+	return jsonv2.MarshalEncode(enc, x)
+}
+
 func (s *ServerVariable) UnmarshalJSON(data []byte) error {
+	if internal.UseOptimizedJSONUnmarshalingV3 {
+		return jsonv2.Unmarshal(data, s)
+	}
 	if err := json.Unmarshal(data, &s.ServerVariableProps); err != nil {
 		return err
 	}
 	if err := json.Unmarshal(data, &s.VendorExtensible); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (s *ServerVariable) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	var x struct {
+		Extensions spec.Extensions `json:",inline"`
+		ServerVariableProps
+	}
+	if err := jsonv2.UnmarshalDecode(dec, &x); err != nil {
+		return err
+	}
+	s.Extensions = internal.SanitizeExtensions(x.Extensions)
+	s.ServerVariableProps = x.ServerVariableProps
+
 	return nil
 }

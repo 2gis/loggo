@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"time"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin/v2"
 
 	"github.com/2gis/loggo/common"
 )
