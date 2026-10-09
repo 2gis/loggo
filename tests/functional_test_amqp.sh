@@ -10,7 +10,7 @@ docker-compose up -d rabbit
 ### spin loggo
 timeout --preserve-status 5 ./build/loggo/loggo --no-log-journald  --no-sla-exporter \
 --flush-interval-sec=1 --buffer-max-size=2 \
---position-file-path="loggo-logs.pos" --logs-path="tests/fixtures/pods" && echo "ok" || echo "bad"
+--position-file-path="loggo-logs.pos" --logs-path="tests/fixtures/pods/*/*/*.log" && echo "ok" || echo "bad"
 
 ### check results
 exec ./build/tests

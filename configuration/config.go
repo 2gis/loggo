@@ -104,6 +104,7 @@ type Config struct {
 	Transport              string
 
 	LogsPath                 string
+	LogsExcludePath          string
 	PositionFilePath         string
 	ContainersIgnoreFilePath string
 
@@ -135,13 +136,21 @@ func GetConfig() Config {
 		Default("/var/log/loggo-containers-ignore").
 		Envar("CONTAINERS_IGNORE_FILE_PATH").
 		StringVar(&config.ContainersIgnoreFilePath)
-	kingpin.Flag("logs-path", "Path where loggo will watch for log files").
-		Default("/var/log/pods/").
+	kingpin.Flag(
+		"logs-path",
+		"Comma-separated glob patterns of log files to watch. '*' does not match '/'.").
+		Default("/var/log/pods/*/*/*.log").
 		Envar("LOGS_PATH").
 		StringVar(&config.LogsPath)
 	kingpin.Flag(
+		"logs-exclude-path",
+		"Comma-separated glob patterns of log files to skip, even if matched by logs-path.").
+		Default("/var/log/pods/*/*loggo*/*.log").
+		Envar("LOGS_EXCLUDE_PATH").
+		StringVar(&config.LogsExcludePath)
+	kingpin.Flag(
 		"targets-refresh-interval-sec",
-		"How often reread logs-path directory searching for new log files").
+		"How often reread logs-path patterns searching for new log files").
 		Default("10").
 		Envar("TARGETS_REFRESH_INTERVAL_SEC").
 		IntVar(&config.TargetsRefreshIntervalSec)

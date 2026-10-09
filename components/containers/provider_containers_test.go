@@ -29,26 +29,14 @@ func setupEnvironment(t *testing.T) (logsDir string) {
 	return logsDir
 }
 
-func TestFiles(t *testing.T) {
-	logsDir := setupEnvironment(t)
-	containerDir := filepath.Join(logsDir, "yabloko_123abc_95d6c1ec", "service")
-
-	directories, err := Tree(logsDir)
-	assert.NoError(t, err)
-	assert.Equal(t, 4, len(directories))
-
-	files, err := Files(containerDir)
-	assert.NoError(t, err)
-	assert.Equal(t, []string{
-		filepath.Join(containerDir, "0.log"),
-		filepath.Join(containerDir, "0.log.gz"),
-	}, files)
-}
-
 func TestContainersProvider(t *testing.T) {
 	logsDir := setupEnvironment(t)
 
-	providerContainers, err := NewProviderContainers(logsDir, logging.NewLoggerDefault())
+	providerContainers, err := NewProviderContainers(
+		filepath.Join(logsDir, "*", "*", "*.log"),
+		filepath.Join(logsDir, "*", "*loggo*", "*.log"),
+		logging.NewLoggerDefault(),
+	)
 	assert.NoError(t, err)
 
 	containers, err := providerContainers.Containers()
@@ -63,4 +51,40 @@ func TestContainersProvider(t *testing.T) {
 	assert.Equal(t, "123abc", container.GetPodName())
 	assert.Equal(t, "yabloko", container.GetPodNamespace())
 	assert.True(t, container.Running())
+}
+
+func TestContainersProviderIncludeAll(t *testing.T) {
+	logsDir := setupEnvironment(t)
+
+	providerContainers, err := NewProviderContainers(filepath.Join(logsDir, "*", "*", "*.log"), "", logging.NewLoggerDefault())
+	assert.NoError(t, err)
+
+	containers, err := providerContainers.Containers()
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(containers))
+}
+
+func TestContainersProviderMultiplePatterns(t *testing.T) {
+	logsDir := setupEnvironment(t)
+
+	include := filepath.Join(logsDir, "yabloko_*", "*", "*.log") + " , " + filepath.Join(logsDir, "kube-system_*", "*", "*.log")
+	exclude := filepath.Join(logsDir, "kube-system_*", "*", "*.log")
+
+	providerContainers, err := NewProviderContainers(include, exclude, logging.NewLoggerDefault())
+	assert.NoError(t, err)
+
+	containers, err := providerContainers.Containers()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(containers))
+}
+
+func TestNewProviderContainersInvalid(t *testing.T) {
+	_, err := NewProviderContainers("", "", logging.NewLoggerDefault())
+	assert.Error(t, err)
+
+	_, err = NewProviderContainers("/var/log/[", "", logging.NewLoggerDefault())
+	assert.Error(t, err)
+
+	_, err = NewProviderContainers("/var/log/*", "/var/log/[", logging.NewLoggerDefault())
+	assert.Error(t, err)
 }
